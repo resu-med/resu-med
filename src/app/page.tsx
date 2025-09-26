@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import AccountDropdown from '@/components/AccountDropdown';
 
 export default function Home() {
   const { state: authState, logout } = useAuth();
@@ -48,17 +49,7 @@ export default function Home() {
               </button>
 
               {authState.isAuthenticated ? (
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-600">
-                    {authState.user?.name || authState.user?.email}
-                  </span>
-                  <button
-                    onClick={logout}
-                    className="text-gray-600 hover:text-red-600 font-medium transition-colors"
-                  >
-                    Logout
-                  </button>
-                </div>
+                <AccountDropdown />
               ) : (
                 <div className="flex items-center space-x-4">
                   <Link
