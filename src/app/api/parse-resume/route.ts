@@ -68,7 +68,17 @@ export async function POST(request: NextRequest) {
         console.log('🤖 Starting AI-powered resume parsing...');
         const openai = new OpenAI({ apiKey });
 
-        const prompt = `Please extract information from this resume and return ONLY a valid JSON object with this exact structure:
+        const prompt = `Extract all information from this resume and return ONLY a valid JSON object. Pay special attention to skills and interests sections which may be listed under various headings like "Skills", "Technical Skills", "Core Competencies", "Interests", "Hobbies", "Personal Interests", etc.
+
+For skills, extract ALL mentions including:
+- Technical skills (programming languages, software, tools)
+- Professional skills (project management, leadership, etc.)
+- Soft skills (communication, teamwork, etc.)
+- Certifications and qualifications
+
+For interests, extract ALL personal interests, hobbies, activities, and pursuits mentioned anywhere in the resume.
+
+Return this exact JSON structure:
 
 {
   "personalInfo": {
@@ -105,12 +115,12 @@ export async function POST(request: NextRequest) {
   ],
   "skills": [
     {
-      "name": "",
-      "level": "beginner|intermediate|advanced|expert",
-      "category": ""
+      "name": "skill name",
+      "level": "intermediate",
+      "category": "Technical|Professional|Soft Skills|Other"
     }
   ],
-  "interests": []
+  "interests": ["interest1", "interest2", "interest3"]
 }
 
 Resume text:
@@ -121,7 +131,7 @@ ${text}`;
           messages: [
             {
               role: 'system',
-              content: 'You are an expert resume parser. Extract structured data from resumes with high accuracy. Always return valid JSON that matches the exact schema provided. Be precise with dates, job titles, and company names.'
+              content: 'You are an expert resume parser. Extract ALL structured data from resumes with high accuracy. Pay special attention to finding skills and interests which may be scattered throughout the resume or in dedicated sections. Extract technical skills, soft skills, tools, technologies, hobbies, interests, and personal activities. Always return valid JSON that matches the exact schema provided. Be precise with dates, job titles, and company names.'
             },
             {
               role: 'user',
@@ -136,6 +146,14 @@ ${text}`;
         if (content) {
           parsedData = JSON.parse(content);
           console.log('✅ AI parsing successful');
+          console.log('🔍 Skills found:', parsedData.skills?.length || 0);
+          console.log('🔍 Interests found:', parsedData.interests?.length || 0);
+          if (parsedData.skills) {
+            console.log('📋 Skills:', parsedData.skills.map((s: any) => s.name || s).join(', '));
+          }
+          if (parsedData.interests) {
+            console.log('🌟 Interests:', parsedData.interests.join(', '));
+          }
         }
       } catch (error) {
         console.error('AI parsing failed:', error);
