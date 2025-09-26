@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mammoth from 'mammoth';
+import OpenAI from 'openai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,10 +59,95 @@ export async function POST(request: NextRequest) {
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     text = text.replace(/\n{3,}/g, '\n\n'); // Limit consecutive newlines
 
+    // Use AI to parse the resume text into structured data
+    let parsedData = null;
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (apiKey && text.trim().length > 50) {
+      try {
+        console.log('🤖 Starting AI-powered resume parsing...');
+        const openai = new OpenAI({ apiKey });
+
+        const prompt = `Please extract information from this resume and return ONLY a valid JSON object with this exact structure:
+
+{
+  "personalInfo": {
+    "firstName": "",
+    "lastName": "",
+    "email": "",
+    "phone": "",
+    "location": "",
+    "linkedIn": "",
+    "summary": ""
+  },
+  "experience": [
+    {
+      "jobTitle": "",
+      "company": "",
+      "location": "",
+      "startDate": "",
+      "endDate": "",
+      "current": false,
+      "description": "",
+      "achievements": []
+    }
+  ],
+  "education": [
+    {
+      "institution": "",
+      "degree": "",
+      "field": "",
+      "startDate": "",
+      "endDate": "",
+      "gpa": "",
+      "achievements": []
+    }
+  ],
+  "skills": [
+    {
+      "name": "",
+      "level": "beginner|intermediate|advanced|expert",
+      "category": ""
+    }
+  ],
+  "interests": []
+}
+
+Resume text:
+${text}`;
+
+        const response = await openai.chat.completions.create({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert resume parser. Extract structured data from resumes with high accuracy. Always return valid JSON that matches the exact schema provided. Be precise with dates, job titles, and company names.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 2000
+        });
+
+        const content = response.choices[0]?.message?.content?.trim();
+        if (content) {
+          parsedData = JSON.parse(content);
+          console.log('✅ AI parsing successful');
+        }
+      } catch (error) {
+        console.error('AI parsing failed:', error);
+        // Continue without AI parsing
+      }
+    }
+
     return NextResponse.json({
       text: text.trim(),
       filename: file.name,
       size: file.size,
+      parsedData: parsedData
     });
   } catch (error) {
     console.error('Resume parsing error:', error);

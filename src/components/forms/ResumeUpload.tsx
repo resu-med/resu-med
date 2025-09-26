@@ -29,8 +29,23 @@ export default function ResumeUpload() {
     setUploadStatus({ type: 'info', message: 'Parsing your resume...' });
 
     try {
-      // Parse the file content
-      const text = await FileParser.parseFile(file);
+      // Parse the file content using the enhanced API
+      setUploadStatus({ type: 'info', message: 'Extracting text from your resume...' });
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/parse-resume', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to parse resume');
+      }
+
+      const { text, parsedData } = await response.json();
 
       if (!text || text.trim().length < 50) {
         setUploadStatus({
@@ -40,92 +55,102 @@ export default function ResumeUpload() {
         return;
       }
 
-      // Parse the resume data using AI-powered SmartResumeParser
-      setUploadStatus({ type: 'info', message: 'Using advanced AI to analyze your resume...' });
-      const parsedData = await SmartResumeParser.parseResume(text);
+      setUploadStatus({ type: 'info', message: 'AI analysis complete!' });
 
       console.log('🎯 PARSED DATA STRUCTURE:', parsedData);
       console.log('🎯 EXPERIENCE DATA:', parsedData.experience);
       console.log('🎯 EXPERIENCE LENGTH:', parsedData.experience?.length);
 
       // Update the profile with parsed data
-      if (parsedData.personalInfo) {
-        console.log('📝 Dispatching personal info:', parsedData.personalInfo);
-        dispatch({ type: 'UPDATE_PERSONAL_INFO', payload: parsedData.personalInfo });
-      }
+      if (parsedData) {
+        console.log('🤖 Using AI-parsed data');
 
-      if (parsedData.experience && parsedData.experience.length > 0) {
-        console.log('💼 Dispatching', parsedData.experience.length, 'experiences');
-        parsedData.experience.forEach((exp, index) => {
-          console.log(`Experience ${index + 1} structure:`, {
-            id: exp.id,
-            company: exp.company,
-            position: exp.position,
-            location: exp.location,
-            startDate: exp.startDate,
-            endDate: exp.endDate,
-            current: exp.current,
-            description: exp.description?.substring(0, 50) + '...',
-            achievements: exp.achievements?.length || 0
-          });
-          console.log('🚀 About to dispatch ADD_EXPERIENCE for:', exp.company, '-', exp.position);
-          dispatch({ type: 'ADD_EXPERIENCE', payload: exp });
-          console.log('✅ Dispatched ADD_EXPERIENCE');
-        });
-        console.log('🏁 Finished dispatching all experiences');
-      } else {
-        console.log('❌ No experience data found or empty array');
-        console.log('❌ parsedData.experience type:', typeof parsedData.experience);
-        console.log('❌ parsedData.experience:', parsedData.experience);
-      }
+        if (parsedData.personalInfo) {
+          console.log('📝 Dispatching personal info:', parsedData.personalInfo);
+          dispatch({ type: 'UPDATE_PERSONAL_INFO', payload: parsedData.personalInfo });
+        }
 
-      if (parsedData.education && parsedData.education.length > 0) {
-        console.log('🎓 Dispatching', parsedData.education.length, 'education entries');
-        parsedData.education.forEach((edu, index) => {
-          console.log(`Education ${index + 1}:`, {
-            degree: edu.degree,
-            institution: edu.institution,
-            field: edu.field,
-            location: edu.location,
-            startDate: edu.startDate,
-            endDate: edu.endDate,
-            gpa: edu.gpa
-          });
-          dispatch({ type: 'ADD_EDUCATION', payload: edu });
-        });
-      } else {
-        console.log('❌ No education data found');
-        console.log('❌ parsedData.education:', parsedData.education);
-      }
+        if (parsedData.experience && parsedData.experience.length > 0) {
+          console.log('💼 Dispatching', parsedData.experience.length, 'experiences');
 
-      if (parsedData.skills && parsedData.skills.length > 0) {
-        console.log('🔧 Dispatching', parsedData.skills.length, 'skills');
-        parsedData.skills.forEach((skill, index) => {
-          console.log(`Skill ${index + 1}:`, {
-            name: skill.name,
-            category: skill.category,
-            level: skill.level
-          });
-          dispatch({ type: 'ADD_SKILL', payload: skill });
-        });
-      } else {
-        console.log('❌ No skills data found');
-        console.log('❌ parsedData.skills:', parsedData.skills);
-      }
+          // Transform AI data to match profile structure
+          const transformedExperience = parsedData.experience.map((exp: any, index: number) => ({
+            id: `exp-${Date.now()}-${index}`,
+            company: exp.company || '',
+            position: exp.jobTitle || '',
+            location: exp.location || '',
+            startDate: exp.startDate || '',
+            endDate: exp.endDate || '',
+            current: exp.current || false,
+            description: exp.description || '',
+            achievements: exp.achievements || []
+          }));
 
-      if (parsedData.interests && parsedData.interests.length > 0) {
-        console.log('🌟 Dispatching', parsedData.interests.length, 'interests');
-        parsedData.interests.forEach((interest, index) => {
-          console.log(`Interest ${index + 1}:`, {
-            name: interest.name,
-            category: interest.category,
-            description: interest.description
+          transformedExperience.forEach((exp: any) => {
+            console.log('🚀 Dispatching experience:', exp.company, '-', exp.position);
+            dispatch({ type: 'ADD_EXPERIENCE', payload: exp });
           });
-          dispatch({ type: 'ADD_INTEREST', payload: interest });
-        });
+          console.log('🏁 Finished dispatching all experiences');
+        } else {
+          console.log('❌ No experience data found or empty array');
+        }
+
+        if (parsedData.education && parsedData.education.length > 0) {
+          console.log('🎓 Dispatching', parsedData.education.length, 'education entries');
+
+          // Transform AI data to match profile structure
+          const transformedEducation = parsedData.education.map((edu: any, index: number) => ({
+            id: `edu-${Date.now()}-${index}`,
+            institution: edu.institution || '',
+            degree: edu.degree || '',
+            field: edu.field || '',
+            location: edu.location || '',
+            startDate: edu.startDate || '',
+            endDate: edu.endDate || '',
+            gpa: edu.gpa || '',
+            achievements: edu.achievements || []
+          }));
+
+          transformedEducation.forEach((edu: any) => {
+            console.log('🚀 Dispatching education:', edu.institution, '-', edu.degree);
+            dispatch({ type: 'ADD_EDUCATION', payload: edu });
+          });
+        } else {
+          console.log('❌ No education data found');
+        }
+
+        if (parsedData.skills && parsedData.skills.length > 0) {
+          console.log('⚡ Dispatching', parsedData.skills.length, 'skills');
+
+          // Transform AI data to match profile structure
+          const transformedSkills = parsedData.skills.map((skill: any, index: number) => ({
+            id: `skill-${Date.now()}-${index}`,
+            name: skill.name || '',
+            level: skill.level || 'intermediate',
+            category: skill.category || 'Other'
+          }));
+
+          transformedSkills.forEach((skill: any) => {
+            console.log('🚀 Dispatching skill:', skill.name);
+            dispatch({ type: 'ADD_SKILL', payload: skill });
+          });
+        }
+
+        if (parsedData.interests && parsedData.interests.length > 0) {
+          console.log('🌟 Dispatching', parsedData.interests.length, 'interests');
+
+          const transformedInterests = parsedData.interests.map((interest: string, index: number) => ({
+            id: `interest-${Date.now()}-${index}`,
+            name: interest
+          }));
+
+          transformedInterests.forEach((interest: any) => {
+            dispatch({ type: 'ADD_INTEREST', payload: interest });
+          });
+        }
       } else {
-        console.log('❌ No interests data found');
-        console.log('❌ parsedData.interests:', parsedData.interests);
+        console.log('❌ No AI-parsed data available, using fallback parser...');
+        // Could add fallback logic here if needed
       }
 
       const sections = [];
