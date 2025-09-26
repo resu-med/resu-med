@@ -118,7 +118,7 @@ Return ONLY the professional overview text, no additional formatting or explanat
   }
 }
 
-// Fallback function for basic overview generation
+// Fallback function for basic overview generation when OpenAI is unavailable
 function generateFallbackOverview(data: { profile: UserProfile }): string | null {
   try {
     const { profile } = data;
