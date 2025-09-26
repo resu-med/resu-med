@@ -32,7 +32,7 @@ export default function Home() {
             <nav className="flex items-center space-x-8">
               {authState.isAuthenticated && (
                 <>
-                  <Link href="/profile" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
+                  <Link href="/profile" className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md">
                     Profile Builder
                   </Link>
                   <Link href="/job-search" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
