@@ -255,15 +255,6 @@ function AuthPageContent() {
                 </button>
               </form>
             )}
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 font-medium mb-2">Demo Credentials:</p>
-              <p className="text-xs text-gray-500">
-                <strong>Admin:</strong> admin@resumed.com / admin123<br />
-                <strong>User:</strong> Any email/password combination
-              </p>
-            </div>
           </div>
         </div>
 
