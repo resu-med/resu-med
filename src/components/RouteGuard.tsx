@@ -25,7 +25,7 @@ export default function RouteGuard({
     }
 
     if (requireAdmin && state.isAuthenticated && !isAdmin()) {
-      router.push('/job-search');
+      router.push('/profile');
       return;
     }
   }, [state.isAuthenticated, state.isLoading, requireAuth, requireAdmin, isAdmin, router]);

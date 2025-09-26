@@ -47,7 +47,7 @@ function AuthPageContent() {
     clearError();
     await login(loginForm);
     if (!state.error) {
-      router.push('/job-search');
+      router.push('/profile');
     }
   };
 
@@ -56,7 +56,7 @@ function AuthPageContent() {
     clearError();
     await signup(signupForm);
     if (!state.error) {
-      router.push('/job-search');
+      router.push('/profile');
     }
   };
 
