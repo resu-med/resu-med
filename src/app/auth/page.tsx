@@ -1,23 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignupData, LoginData, SUBSCRIPTION_PLANS } from '@/types/subscription';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function AuthPage() {
-  const { state, login, signup, clearError } = useAuth();
-  const router = useRouter();
+function AuthSearchParamsHandler({ setIsSignup }: { setIsSignup: (value: boolean) => void }) {
   const searchParams = useSearchParams();
-  const [isSignup, setIsSignup] = useState(false);
 
-  // Check if user should start on signup page
   useEffect(() => {
     if (searchParams.get('mode') === 'signup') {
       setIsSignup(true);
     }
-  }, [searchParams]);
+  }, [searchParams, setIsSignup]);
+
+  return null;
+}
+
+function AuthPageContent() {
+  const { state, login, signup, clearError } = useAuth();
+  const router = useRouter();
+  const [isSignup, setIsSignup] = useState(false);
 
   const [signupForm, setSignupForm] = useState<SignupData>({
     name: '',
@@ -58,6 +62,9 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
+      <Suspense fallback={<div>Loading...</div>}>
+        <AuthSearchParamsHandler setIsSignup={setIsSignup} />
+      </Suspense>
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -269,4 +276,8 @@ export default function AuthPage() {
       </div>
     </div>
   );
+}
+
+export default function AuthPage() {
+  return <AuthPageContent />;
 }
