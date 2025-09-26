@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import type { UserProfile } from '@/types/profile';
 
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-});
+const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+
+const openai = apiKey ? new OpenAI({
+  apiKey: apiKey,
+}) : null;
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,6 +67,15 @@ Write a professional overview that:
 
 Return ONLY the professional overview text, no additional formatting or explanations.
 `;
+
+    // Skip AI generation if no API key is available
+    if (!openai) {
+      const fallbackOverview = generateFallbackOverview({ profile });
+      if (fallbackOverview) {
+        return NextResponse.json({ overview: fallbackOverview });
+      }
+      throw new Error('No OpenAI API key available and fallback failed');
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
