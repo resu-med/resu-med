@@ -1,102 +1,170 @@
-import Image from "next/image";
+'use client';
+
+import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
+  const { state: authState, logout } = useAuth();
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Navigation */}
+      <nav className="bg-white shadow-sm border-b-2 border-teal-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-lg shadow-md">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4" />
+                  <circle cx="12" cy="8" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent">
+                  ResuMed
+                </h1>
+                <p className="text-xs text-teal-600 -mt-1">Clinical Resume Care</p>
+              </div>
+            </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {/* Navigation Actions */}
+            <nav className="flex items-center space-x-8">
+              {authState.isAuthenticated && (
+                <>
+                  <Link href="/profile" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
+                    Profile Builder
+                  </Link>
+                  <Link href="/job-search" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
+                    Job Search
+                  </Link>
+                  <Link href="/templates" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
+                    Templates
+                  </Link>
+                </>
+              )}
+              <button className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
+                About
+              </button>
+
+              {authState.isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-600">
+                    {authState.user?.name || authState.user?.email}
+                  </span>
+                  <button
+                    onClick={logout}
+                    className="text-gray-600 hover:text-red-600 font-medium transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <Link
+                    href="/auth"
+                    className="text-gray-600 hover:text-teal-600 font-medium transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth?mode=signup"
+                    className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-teal-700 hover:to-blue-700 transition-all shadow-md"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </nav>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </nav>
+
+      {/* Hero Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Professional Resume Treatment with
+            <span className="bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent"> Clinical Precision</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
+            Just like medical diagnosis, your resume needs expert analysis. Our AI provides clinical-grade precision in matching your profile to job requirements, ensuring optimal career health.
+          </p>
+
+          <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
+            <Link
+              href={authState.isAuthenticated ? "/profile" : "/auth"}
+              className="w-full sm:w-auto bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition-all shadow-lg hover:shadow-xl inline-block"
+            >
+              📋 Start Your Career Checkup
+            </Link>
+            <Link
+              href={authState.isAuthenticated ? "/job-search" : "/auth"}
+              className="w-full sm:w-auto border-2 border-teal-200 hover:border-teal-400 text-teal-700 hover:bg-teal-50 px-8 py-3 rounded-lg text-lg font-medium transition-all inline-block"
+            >
+              🩺 View Treatment Options
+            </Link>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="text-center">
+            <div className="bg-gradient-to-br from-teal-100 to-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-2xl">📋</span>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Patient History Intake</h3>
+            <p className="text-gray-600">
+              Comprehensive career profile assessment including experience, education, skills, and professional interests.
+            </p>
+          </div>
+
+          <div className="text-center">
+            <div className="bg-gradient-to-br from-blue-100 to-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-2xl">🔬</span>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Diagnostic Analysis</h3>
+            <p className="text-gray-600">
+              Advanced algorithms analyze job requirements and provide precise recommendations for optimal career alignment.
+            </p>
+          </div>
+
+          <div className="text-center">
+            <div className="bg-gradient-to-br from-purple-100 to-pink-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-2xl">💊</span>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Prescription-Grade Results</h3>
+            <p className="text-gray-600">
+              Export professionally formatted, ATS-optimized resumes with clinical precision for maximum effectiveness.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-white border-t-2 border-teal-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-teal-500 to-blue-600 rounded-lg">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4" />
+                  <circle cx="12" cy="8" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
+                </svg>
+              </div>
+              <span className="text-lg font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent">
+                ResuMed
+              </span>
+            </div>
+            <p className="text-gray-600">
+              &copy; 2024 ResuMed - Clinical Resume Care. Providing professional career health solutions.
+            </p>
+            <p className="text-sm text-teal-600 mt-2">
+              🏥 Your career deserves expert care
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
   );
