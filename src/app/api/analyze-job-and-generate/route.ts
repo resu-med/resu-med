@@ -193,16 +193,19 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
 
     CREATION INSTRUCTIONS:
     1. **PROFESSIONAL SUMMARY**: Write a compelling 3-4 line summary that:
-       - Incorporates the exact job title and key requirements
-       - Uses specific keywords from the job description
-       - Highlights most relevant experience and quantifiable achievements
-       - Shows clear alignment with the role
+       - Uses the candidate's ACTUAL background and experience
+       - NEVER claims qualifications they don't have (e.g., "Chartered Engineer" if they're not)
+       - Highlights their REAL experience and quantifiable achievements
+       - Shows how their actual skills transfer to the role
+       - Uses keywords from job description only for skills/experience they actually possess
 
     2. **CORE COMPETENCIES**: Create a skills section that:
-       - Prioritizes skills that directly match job requirements
-       - Uses exact terminology from the job posting
-       - Includes both technical and soft skills
-       - Groups related skills logically
+       - ONLY use skills the candidate ACTUALLY has from their profile
+       - NEVER add skills the candidate doesn't possess
+       - NEVER invent technical skills to match job requirements
+       - Prioritize their REAL skills that match job requirements
+       - Uses exact terminology from job posting ONLY for skills they actually have
+       - Include both technical and soft skills they genuinely possess
 
     3. **PROFESSIONAL EXPERIENCE**: For each role:
        - USE EXACT JOB TITLES from candidate's profile - DO NOT modify or change them
@@ -220,9 +223,11 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - CRITICAL: Do NOT change job titles to match target role
 
     4. **EDUCATION & CERTIFICATIONS**:
-       - Highlight education that matches requirements
-       - Include relevant coursework if applicable
-       - Add any certifications mentioned in job posting
+       - ONLY use the candidate's ACTUAL education from their profile
+       - NEVER add fake degrees, certifications, or qualifications
+       - NEVER invent qualifications to match job requirements
+       - If the candidate lacks required qualifications, do NOT fabricate them
+       - Only highlight actual relevant coursework or achievements they have
 
     5. **ATS OPTIMIZATION**:
        - Use exact keywords from job description
@@ -256,11 +261,15 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     • Developed scalable web applications using React and Node.js
     • Led a team of 5 engineers to deliver critical features on time
 
-    IMPORTANT:
-    - Return ONLY the complete resume content using the candidate's ACTUAL experience
+    CRITICAL ETHICAL REQUIREMENTS:
+    - NEVER fabricate qualifications, degrees, certifications, or skills the candidate doesn't have
+    - NEVER add fake education to match job requirements
+    - ONLY use the candidate's ACTUAL qualifications and experience
+    - If the candidate lacks required qualifications, highlight their transferable skills instead
     - DO NOT include ${jobTitle} at ${companyName} as work experience (this is the target job)
+    - Return ONLY complete resume content using candidate's ACTUAL background
     - No explanations or meta-commentary
-    - The output must be ready to send directly to a recruiter
+    - The output must be truthful and ready to send directly to a recruiter
   `;
 
   console.log('📝 Starting resume generation...');
