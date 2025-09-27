@@ -107,8 +107,10 @@ Return this exact JSON structure:
       "institution": "",
       "degree": "",
       "field": "",
+      "location": "",
       "startDate": "",
       "endDate": "",
+      "current": false,
       "gpa": "",
       "achievements": []
     }
@@ -120,7 +122,13 @@ Return this exact JSON structure:
       "category": "Technical|Professional|Soft Skills|Other"
     }
   ],
-  "interests": ["interest1", "interest2", "interest3"]
+  "interests": [
+    {
+      "name": "interest name",
+      "category": "hobby|volunteer|interest|other",
+      "description": ""
+    }
+  ]
 }
 
 Resume text:

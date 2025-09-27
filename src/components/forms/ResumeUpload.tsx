@@ -77,17 +77,17 @@ export default function ResumeUpload() {
           const transformedExperience = parsedData.experience.map((exp: any, index: number) => ({
             id: `exp-${Date.now()}-${index}`,
             company: exp.company || '',
-            position: exp.jobTitle || '',
+            jobTitle: exp.jobTitle || '',
             location: exp.location || '',
             startDate: exp.startDate || '',
             endDate: exp.endDate || '',
             current: exp.current || false,
             description: exp.description || '',
-            achievements: exp.achievements || []
+            achievements: Array.isArray(exp.achievements) ? exp.achievements : []
           }));
 
           transformedExperience.forEach((exp: any) => {
-            console.log('🚀 Dispatching experience:', exp.company, '-', exp.position);
+            console.log('🚀 Dispatching experience:', exp.company, '-', exp.jobTitle);
             dispatch({ type: 'ADD_EXPERIENCE', payload: exp });
           });
           console.log('🏁 Finished dispatching all experiences');
@@ -107,8 +107,9 @@ export default function ResumeUpload() {
             location: edu.location || '',
             startDate: edu.startDate || '',
             endDate: edu.endDate || '',
+            current: edu.current || false,
             gpa: edu.gpa || '',
-            achievements: edu.achievements || []
+            achievements: Array.isArray(edu.achievements) ? edu.achievements : []
           }));
 
           transformedEducation.forEach((edu: any) => {
@@ -123,12 +124,24 @@ export default function ResumeUpload() {
           console.log('⚡ Dispatching', parsedData.skills.length, 'skills');
 
           // Transform AI data to match profile structure
-          const transformedSkills = parsedData.skills.map((skill: any, index: number) => ({
-            id: `skill-${Date.now()}-${index}`,
-            name: skill.name || '',
-            level: skill.level || 'intermediate',
-            category: skill.category || 'Other'
-          }));
+          const transformedSkills = parsedData.skills.map((skill: any, index: number) => {
+            // Normalize category to lowercase valid values
+            let category = (skill.category || 'other').toLowerCase();
+            if (!['technical', 'soft', 'language', 'other'].includes(category)) {
+              // Map common variations
+              if (category.includes('technical') || category.includes('programming')) category = 'technical';
+              else if (category.includes('soft') || category.includes('professional')) category = 'soft';
+              else if (category.includes('language')) category = 'language';
+              else category = 'other';
+            }
+
+            return {
+              id: `skill-${Date.now()}-${index}`,
+              name: skill.name || '',
+              level: ['beginner', 'intermediate', 'advanced', 'expert'].includes(skill.level) ? skill.level : 'intermediate',
+              category: category
+            };
+          });
 
           transformedSkills.forEach((skill: any) => {
             console.log('🚀 Dispatching skill:', skill.name);
@@ -139,12 +152,26 @@ export default function ResumeUpload() {
         if (parsedData.interests && parsedData.interests.length > 0) {
           console.log('🌟 Dispatching', parsedData.interests.length, 'interests');
 
-          const transformedInterests = parsedData.interests.map((interest: string, index: number) => ({
-            id: `interest-${Date.now()}-${index}`,
-            name: interest
-          }));
+          const transformedInterests = parsedData.interests.map((interest: string | any, index: number) => {
+            // Handle both string and object formats
+            const interestName = typeof interest === 'string' ? interest : interest.name || '';
+            let category = typeof interest === 'object' ? interest.category : 'hobby';
+
+            // Normalize category to valid values
+            if (!['hobby', 'volunteer', 'interest', 'other'].includes(category)) {
+              category = 'hobby'; // Default fallback
+            }
+
+            return {
+              id: `interest-${Date.now()}-${index}`,
+              name: interestName,
+              category: category,
+              description: typeof interest === 'object' ? interest.description || '' : ''
+            };
+          });
 
           transformedInterests.forEach((interest: any) => {
+            console.log('🚀 Dispatching interest:', interest.name);
             dispatch({ type: 'ADD_INTEREST', payload: interest });
           });
         }
