@@ -40,6 +40,14 @@ export async function POST(request: NextRequest) {
 
     const user = userResult[0];
 
+    // Check if user has a password hash (migrated from old system)
+    if (!user.password_hash) {
+      console.log(`❌ User has no password hash (old account): ${email}`);
+      return NextResponse.json({
+        error: 'Invalid email or password'
+      }, { status: 401 });
+    }
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 

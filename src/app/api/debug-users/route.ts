@@ -8,7 +8,7 @@ export async function GET() {
     }
 
     // Get all users
-    const users = await sql`SELECT id, email, created_at FROM users ORDER BY created_at DESC`;
+    const users = await sql`SELECT id, email, name, password_hash, email_verified, created_at FROM users ORDER BY created_at DESC`;
 
     return NextResponse.json({ users });
 

@@ -11,7 +11,8 @@
       "Bash(npm install:*)",
       "Bash(curl:*)",
       "Bash(sudo rm:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

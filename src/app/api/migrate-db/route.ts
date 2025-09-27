@@ -36,12 +36,18 @@ export async function POST() {
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0`;
       await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP`;
 
-      // Make name required if it isn't already
-      await sql`ALTER TABLE users ALTER COLUMN name SET NOT NULL`;
-
       console.log('✅ User security columns added');
     } catch (error) {
-      console.log('⚠️ User security columns may already exist or have constraints:', error);
+      console.log('⚠️ User security columns may already exist:', error);
+    }
+
+    // Fix users with null names before making the column NOT NULL
+    try {
+      await sql`UPDATE users SET name = email WHERE name IS NULL`;
+      await sql`ALTER TABLE users ALTER COLUMN name SET NOT NULL`;
+      console.log('✅ User name constraints updated');
+    } catch (error) {
+      console.log('⚠️ User name constraints may already exist:', error);
     }
 
     // Update existing skill categories to lowercase
