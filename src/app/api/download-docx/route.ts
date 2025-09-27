@@ -382,7 +382,8 @@ function createDocumentSections(parsedData: any): Paragraph[] {
                   children: [
                     new TextRun({
                       text: skillsText,
-                      size: 22
+                      size: 22,
+                      font: "Calibri"
                     })
                   ],
                   spacing: { after: 150 },
@@ -458,7 +459,8 @@ function createDocumentSections(parsedData: any): Paragraph[] {
                   children: [
                     new TextRun({
                       text: item.description,
-                      size: 22
+                      size: 22,
+                      font: "Calibri"
                     })
                   ],
                   spacing: { after: 150 },
@@ -490,7 +492,8 @@ function createDocumentSections(parsedData: any): Paragraph[] {
                     children: [
                       new TextRun({
                         text: achievement.startsWith('•') ? achievement : `• ${achievement}`,
-                        size: 22
+                        size: 22,
+                        font: "Calibri"
                       })
                     ],
                     spacing: { after: 120 },
@@ -567,7 +570,8 @@ function createDocumentSections(parsedData: any): Paragraph[] {
                   children: [
                     new TextRun({
                       text: `GPA: ${item.gpa}`,
-                      size: 22
+                      size: 22,
+                      font: "Calibri"
                     })
                   ],
                   spacing: { after: 200 }
@@ -583,7 +587,8 @@ function createDocumentSections(parsedData: any): Paragraph[] {
                     children: [
                       new TextRun({
                         text: achievement.startsWith('•') ? achievement : `• ${achievement}`,
-                        size: 22
+                        size: 22,
+                        font: "Calibri"
                       })
                     ],
                     spacing: { after: 120 },
@@ -652,7 +657,8 @@ function createFallbackDocument(content: any): Paragraph[] {
       children: [
         new TextRun({
           text: line,
-          size: 22
+          size: 22,
+          font: "Calibri"
         })
       ],
       spacing: { after: 150 }
@@ -956,7 +962,7 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
     if (line.trim() === '') {
       children.push(
         new Paragraph({
-          children: [new TextRun({ text: '', size: 22 })],
+          children: [new TextRun({ text: '', size: 22, font: "Calibri" })],
           spacing: { after: 150 }
         })
       );

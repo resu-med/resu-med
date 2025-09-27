@@ -754,16 +754,33 @@ Re: ${jobTitle} Position`;
 
 I am excited to apply for the ${jobTitle} position at ${companyName}. As a ${analysis.roleLevel}-level professional with ${experience.length > 0 ? `${Math.max(1, experience.length)}+ years` : 'relevant experience'} in ${analysis.industryType.toLowerCase()}, I bring exactly the combination of ${analysis.requiredSkills.slice(0, 2).join(' and ')} expertise that your role demands. ${personalInfo.professionalOverview ? personalInfo.professionalOverview.replace(/\.$/, '') + ', and I' : 'I'} am particularly drawn to ${companyName}'s ${analysis.companyInfo.includes('innovative') || analysis.companyInfo.includes('leading') ? 'innovative approach' : 'commitment to excellence'} in the ${analysis.industryType.toLowerCase()} space.`;
 
-  // Build qualification match paragraph with better readability and flow
-  const qualificationMatch = `Your requirements for ${analysis.keyRequirements.slice(0, 3).join(', ').toLowerCase()} align perfectly with my background. ${topExperience ?
-    `In my current role as ${topExperience.jobTitle || topExperience.position} at ${topExperience.company}, I have ${topExperience.description || 'consistently delivered exceptional results'}` :
-    'Throughout my professional experience, I have developed strong capabilities in these areas'}${topAchievements.length > 0 ?
-    `. This includes achieving notable results such as ${topAchievements[0].toLowerCase().replace(/^[A-Z]/, char => char.toLowerCase())}` :
-    ', consistently exceeding performance expectations'}.
+  // Build clear, readable qualification match paragraphs
+  const qualificationParts = [];
 
-${matchingSkills.length > 0 ?
-    `My proficiency in ${matchingSkills.slice(0, 3).map(s => s.name).join(', ')} directly supports your technical requirements. Additionally, my experience with ${analysis.requiredSkills.slice(0, 2).join(' and ')} ensures I can contribute immediately to your team's objectives.` :
-    `This experience has equipped me with the technical and analytical skills essential for success in your ${jobTitle} role.`}`;
+  // Opening statement about alignment
+  qualificationParts.push(`Your requirements for ${analysis.keyRequirements.slice(0, 3).join(', ').toLowerCase()} align perfectly with my background.`);
+
+  // Current role experience
+  if (topExperience) {
+    qualificationParts.push(`In my current role as ${topExperience.jobTitle || topExperience.position} at ${topExperience.company}, I have ${topExperience.description || 'consistently delivered exceptional results'}.`);
+  } else {
+    qualificationParts.push(`Throughout my professional experience, I have developed strong capabilities in these areas.`);
+  }
+
+  // Achievement example
+  if (topAchievements.length > 0) {
+    qualificationParts.push(`This includes achieving notable results such as ${topAchievements[0].toLowerCase().replace(/^[A-Z]/, char => char.toLowerCase())}.`);
+  }
+
+  // Technical skills alignment
+  if (matchingSkills.length > 0) {
+    qualificationParts.push(`My proficiency in ${matchingSkills.slice(0, 3).map(s => s.name).join(', ')} directly supports your technical requirements.`);
+    qualificationParts.push(`Additionally, my experience with ${analysis.requiredSkills.slice(0, 2).join(' and ')} ensures I can contribute immediately to your team's objectives.`);
+  } else {
+    qualificationParts.push(`This experience has equipped me with the technical and analytical skills essential for success in your ${jobTitle} role.`);
+  }
+
+  const qualificationMatch = qualificationParts.join(' ');
 
   // Build value proposition that shows company alignment and unique value
   const valueProposition = `What sets me apart as a candidate is my ability to ${analysis.responsibilities && analysis.responsibilities.length > 0 ? analysis.responsibilities[0].toLowerCase() : 'deliver innovative solutions'} while maintaining focus on ${analysis.industryType.toLowerCase() === 'technology' ? 'scalability and user experience' : 'operational excellence and stakeholder satisfaction'}. ${secondExperience ?
