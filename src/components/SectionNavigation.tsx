@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { calculateProfileCompleteness } from '@/lib/profileCompleteness';
 
 interface SectionNavigationProps {
@@ -17,6 +18,7 @@ export default function SectionNavigation({
   profile
 }: SectionNavigationProps) {
   const [isMinimized, setIsMinimized] = useState(false);
+  const router = useRouter();
 
   const sections = [
     { id: 'upload', label: 'Import Resume', icon: '📋' },
@@ -97,7 +99,7 @@ export default function SectionNavigation({
 
   const handleNext = () => {
     if (nextSection?.id === 'job-search') {
-      window.location.href = '/job-search';
+      router.push('/job-search');
     } else if (nextSection) {
       onNavigateToSection(nextSection.id);
     }
