@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ Generated DOCX buffer, size:', buffer.length);
 
     // Return the document as a downloadable file
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as any, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': `attachment; filename="${filename || 'document.docx'}"`,
@@ -385,8 +385,8 @@ function createDocumentSections(parsedData: any): Paragraph[] {
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: item.dates,
-                      italic: true,
+                      text: formatDateRange(item.dates),
+                      italics: true,
                       size: 20,
                       color: "666666"
                     })
@@ -490,8 +490,8 @@ function createDocumentSections(parsedData: any): Paragraph[] {
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: item.dates,
-                      italic: true,
+                      text: formatDateRange(item.dates),
+                      italics: true,
                       size: 20,
                       color: "666666"
                     })
@@ -728,7 +728,11 @@ function parseExperienceSection(lines: string[]): any[] {
       currentJob = {
         type: "job",
         jobTitle: line,
-        achievements: []
+        achievements: [],
+        company: "",
+        location: "",
+        dates: "",
+        description: ""
       };
       currentAchievements = [];
       expectingCompanyNext = true;
@@ -966,6 +970,81 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
       children
     }]
   });
+}
+
+function formatDateRange(dateStr: string): string {
+  if (!dateStr) return dateStr;
+
+  // Handle "Present" dates
+  if (dateStr.toLowerCase().includes('present')) {
+    const parts = dateStr.split(/[-–—]/);
+    if (parts.length >= 2) {
+      const startDate = formatSingleDate(parts[0].trim());
+      return `${startDate} - Present`;
+    }
+    return dateStr;
+  }
+
+  // Handle date ranges with hyphens or dashes
+  if (dateStr.includes('-') || dateStr.includes('–') || dateStr.includes('—')) {
+    const parts = dateStr.split(/[-–—]/);
+    if (parts.length >= 2) {
+      const startDate = formatSingleDate(parts[0].trim());
+      const endDate = formatSingleDate(parts[1].trim());
+      return `${startDate} - ${endDate}`;
+    }
+  }
+
+  // Single date
+  return formatSingleDate(dateStr);
+}
+
+function formatSingleDate(dateStr: string): string {
+  if (!dateStr || dateStr.toLowerCase() === 'present') return dateStr;
+
+  // Month mappings
+  const monthMap: { [key: string]: string } = {
+    'january': '01', 'jan': '01',
+    'february': '02', 'feb': '02',
+    'march': '03', 'mar': '03',
+    'april': '04', 'apr': '04',
+    'may': '05',
+    'june': '06', 'jun': '06',
+    'july': '07', 'jul': '07',
+    'august': '08', 'aug': '08',
+    'september': '09', 'sep': '09', 'sept': '09',
+    'october': '10', 'oct': '10',
+    'november': '11', 'nov': '11',
+    'december': '12', 'dec': '12'
+  };
+
+  // Try to extract year (4 digits)
+  const yearMatch = dateStr.match(/\b(20\d{2})\b/);
+  const year = yearMatch ? yearMatch[1] : '';
+
+  // Try to extract month name
+  const lowerDate = dateStr.toLowerCase();
+  let month = '';
+
+  for (const [monthName, monthNum] of Object.entries(monthMap)) {
+    if (lowerDate.includes(monthName)) {
+      month = monthNum;
+      break;
+    }
+  }
+
+  // If we found both month and year, format as mm/yyyy
+  if (month && year) {
+    return `${month}/${year}`;
+  }
+
+  // If we only have year, return as is
+  if (year) {
+    return year;
+  }
+
+  // Return original if we can't parse
+  return dateStr;
 }
 
 function parseResumeContent(content: string): {
