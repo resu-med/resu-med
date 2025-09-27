@@ -65,6 +65,18 @@ function createResumeDocument(content: string, profile?: any): Document {
     // Skip empty lines
     if (!line) continue;
 
+    // Skip personal info lines (already added in header)
+    if (line.includes('johnfitzsimons@hotmail.co.uk') ||
+        line.includes('07453 942086') ||
+        line.includes('linkedin.com/in/john-fitzsimons') ||
+        (line.includes('John Fitzsimons') && !line.includes('|'))) continue;
+
+    // Skip ATS keywords section
+    if (line.includes('ATS OPTIMIZATION KEYWORDS') ||
+        line.includes('Finance Director, Financial planning') ||
+        line.includes('This resume is tailored to highlight') ||
+        line.startsWith('---')) continue;
+
     // Section headers (remove asterisks and format properly)
     const cleanLine = line.replace(/\*\*/g, '').trim();
     if (cleanLine === cleanLine.toUpperCase() &&
