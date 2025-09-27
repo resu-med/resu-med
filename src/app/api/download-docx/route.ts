@@ -71,11 +71,13 @@ function createResumeDocument(content: string, profile?: any): Document {
         line.includes('linkedin.com/in/john-fitzsimons') ||
         (line.includes('John Fitzsimons') && !line.includes('|'))) continue;
 
-    // Skip ATS keywords section
+    // Skip ATS keywords section and References (since we hardcode it)
     if (line.includes('ATS OPTIMIZATION') ||
         line.includes('Finance Director, Financial planning') ||
         line.includes('Financial Director, Finance Director, Senior Management') ||
         line.includes('This resume is tailored to highlight') ||
+        line.includes('REFERENCES') ||
+        line.includes('Available upon request') ||
         line.startsWith('---')) continue;
 
     // Section headers (remove asterisks and format properly)
@@ -84,8 +86,7 @@ function createResumeDocument(content: string, profile?: any): Document {
         (cleanLine.includes('PROFESSIONAL SUMMARY') ||
          cleanLine.includes('CORE COMPETENCIES') ||
          cleanLine.includes('PROFESSIONAL EXPERIENCE') ||
-         cleanLine.includes('EDUCATION') ||
-         cleanLine.includes('REFERENCES'))) {
+         cleanLine.includes('EDUCATION'))) {
 
       children.push(new Paragraph({
         children: [
@@ -210,6 +211,38 @@ function createResumeDocument(content: string, profile?: any): Document {
       }
     }
   }
+
+  // Always add References section at the end
+  children.push(new Paragraph({
+    children: [
+      new TextRun({
+        text: "REFERENCES",
+        bold: true,
+        size: 28,
+        color: "1F4E79",
+        font: "Calibri"
+      })
+    ],
+    spacing: { before: 400, after: 200 },
+    border: {
+      bottom: {
+        color: "1F4E79",
+        size: 6,
+        style: BorderStyle.SINGLE
+      }
+    }
+  }));
+
+  children.push(new Paragraph({
+    children: [
+      new TextRun({
+        text: "References on request",
+        size: 24, // 12pt in Word
+        font: "Calibri"
+      })
+    ],
+    spacing: { after: 150 }
+  }));
 
   return new Document({
     sections: [{
