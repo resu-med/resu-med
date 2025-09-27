@@ -16,7 +16,7 @@ export default function ExperienceForm() {
   const createNewExperience = (): Experience => ({
     id: Date.now().toString(),
     company: '',
-    position: '',
+    jobTitle: '',
     location: '',
     startDate: '',
     endDate: '',
@@ -110,8 +110,8 @@ export default function ExperienceForm() {
                       </label>
                       <input
                         type="text"
-                        value={exp.position}
-                        onChange={(e) => handleUpdate(exp.id, 'position', e.target.value)}
+                        value={exp.jobTitle}
+                        onChange={(e) => handleUpdate(exp.id, 'jobTitle', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                         style={{ color: '#1f2937' }}
                         placeholder="Job title"
@@ -236,7 +236,7 @@ export default function ExperienceForm() {
                     <div className="flex-1">
                       <div className="flex flex-col space-y-1">
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {exp.position || 'Position not specified'}
+                          {exp.jobTitle || 'Position not specified'}
                         </h3>
                         {exp.company && (
                           <p className="text-base font-medium text-gray-700">
@@ -283,7 +283,7 @@ export default function ExperienceForm() {
                     </div>
                   )}
 
-                  {!exp.position && !exp.company && !exp.description && (!exp.achievements || exp.achievements.filter(a => a.trim()).length === 0) && (
+                  {!exp.jobTitle && !exp.company && !exp.description && (!exp.achievements || exp.achievements.filter(a => a.trim()).length === 0) && (
                     <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-md">
                       <p className="text-sm">No detailed information available for this experience.</p>
                       <p className="text-xs mt-1">Click "Edit" to add job details.</p>

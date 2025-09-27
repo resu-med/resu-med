@@ -13,7 +13,7 @@ export interface PersonalInfo {
 export interface Experience {
   id: string;
   company: string;
-  position: string;
+  jobTitle: string;
   location: string;
   startDate: string;
   endDate?: string;

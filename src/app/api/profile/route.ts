@@ -78,8 +78,10 @@ export async function GET(request: NextRequest) {
         institution: edu.institution,
         degree: edu.degree,
         field: edu.field || '',
+        location: edu.location || '',
         startDate: edu.start_date || '',
         endDate: edu.end_date || '',
+        current: edu.current || false,
         gpa: edu.gpa || '',
         achievements: edu.achievements || []
       })),
@@ -87,9 +89,14 @@ export async function GET(request: NextRequest) {
         id: skill.id.toString(),
         name: skill.name,
         level: skill.level || 'intermediate',
-        category: skill.category || 'Other'
+        category: skill.category || 'other'
       })),
-      interests: interests.map(interest => interest.name)
+      interests: interests.map(interest => ({
+        id: interest.id.toString(),
+        name: interest.name,
+        category: interest.category || 'hobby',
+        description: interest.description || ''
+      }))
     };
 
     return NextResponse.json({ profile: userProfile });
@@ -171,10 +178,10 @@ export async function POST(request: NextRequest) {
       for (const edu of profile.education) {
         await sql`
           INSERT INTO education (
-            user_id, institution, degree, field, start_date, end_date, gpa, achievements
+            user_id, institution, degree, field, location, start_date, end_date, current, gpa, achievements
           ) VALUES (
-            ${userId}, ${edu.institution}, ${edu.degree}, ${edu.field || ''},
-            ${edu.startDate || ''}, ${edu.endDate || ''}, ${edu.gpa || ''}, ${edu.achievements || []}
+            ${userId}, ${edu.institution}, ${edu.degree}, ${edu.field || ''}, ${edu.location || ''},
+            ${edu.startDate || ''}, ${edu.endDate || ''}, ${edu.current || false}, ${edu.gpa || ''}, ${edu.achievements || []}
           )
         `;
       }
@@ -186,7 +193,7 @@ export async function POST(request: NextRequest) {
       for (const skill of profile.skills) {
         await sql`
           INSERT INTO skills (user_id, name, level, category)
-          VALUES (${userId}, ${skill.name}, ${skill.level || 'intermediate'}, ${skill.category || 'Other'})
+          VALUES (${userId}, ${skill.name}, ${skill.level || 'intermediate'}, ${skill.category || 'other'})
         `;
       }
     }
@@ -196,8 +203,8 @@ export async function POST(request: NextRequest) {
     if (profile.interests && profile.interests.length > 0) {
       for (const interest of profile.interests) {
         await sql`
-          INSERT INTO interests (user_id, name)
-          VALUES (${userId}, ${interest})
+          INSERT INTO interests (user_id, name, category, description)
+          VALUES (${userId}, ${interest.name}, ${interest.category || 'hobby'}, ${interest.description || ''})
         `;
       }
     }

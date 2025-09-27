@@ -70,8 +70,10 @@ export async function initializeDatabase() {
         institution VARCHAR(255) NOT NULL,
         degree VARCHAR(255) NOT NULL,
         field VARCHAR(255),
+        location VARCHAR(255),
         start_date VARCHAR(50),
         end_date VARCHAR(50),
+        current BOOLEAN DEFAULT FALSE,
         gpa VARCHAR(20),
         achievements TEXT[],
         created_at TIMESTAMP DEFAULT NOW()
@@ -96,6 +98,8 @@ export async function initializeDatabase() {
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
+        category VARCHAR(100) DEFAULT 'hobby',
+        description TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `;
