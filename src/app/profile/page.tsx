@@ -117,82 +117,21 @@ function ProfilePageContent() {
         />
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Enhanced Navigation Sidebar */}
+          {/* Consolidated Profile Navigation */}
           <div className="lg:w-72 flex-shrink-0">
             <nav className="bg-white rounded-xl shadow-sm border border-teal-100 p-6">
-              <div className="flex items-center space-x-2 mb-6">
-                <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                <h3 className="font-semibold text-gray-900">Treatment Sections</h3>
-              </div>
-              <ul className="space-y-2">
-                {sections.map((section) => {
-                  const isCompleted = getCompletionStatus(section.id as ProfileSection);
-                  return (
-                    <li key={section.id}>
-                      <button
-                        onClick={() => setActiveSection(section.id as ProfileSection)}
-                        className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-all ${
-                          activeSection === section.id
-                            ? 'bg-gradient-to-r from-teal-50 to-blue-50 text-teal-700 border border-teal-200 shadow-sm'
-                            : 'text-gray-700 hover:bg-gray-50 border border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <span className="text-lg mr-3">{section.icon}</span>
-                          <span className="font-medium">{section.label}</span>
-                        </div>
-                        <div className={`w-2 h-2 rounded-full ${
-                          isCompleted ? 'bg-green-500' :
-                          activeSection === section.id ? 'bg-teal-500' : 'bg-gray-300'
-                        }`}></div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-
-            {/* Progress Summary */}
-            <div className="mt-6 bg-white rounded-xl shadow-sm border border-teal-100 p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <h3 className="font-semibold text-gray-900">Progress Overview</h3>
-              </div>
-              <div className="space-y-3">
-                {sections.map((section) => {
-                  const isCompleted = getCompletionStatus(section.id as ProfileSection);
-                  return (
-                    <div key={section.id} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 flex items-center">
-                        <span className="mr-2">{section.icon}</span>
-                        {section.label}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        {isCompleted ? (
-                          <div className="flex items-center text-xs text-green-600 font-medium">
-                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            Complete
-                          </div>
-                        ) : (
-                          <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Overall Progress</span>
-                  <span className="font-medium text-teal-600">
+              {/* Header with Overall Progress */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900 flex items-center">
+                    <div className="w-2 h-2 bg-teal-500 rounded-full mr-2"></div>
+                    Profile Sections
+                  </h3>
+                  <span className="text-sm font-medium text-teal-600">
                     {Math.round((sections.filter(section => getCompletionStatus(section.id as ProfileSection)).length / sections.length) * 100)}%
                   </span>
                 </div>
-                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-gradient-to-r from-teal-500 to-blue-500 h-2 rounded-full transition-all duration-300"
                     style={{
@@ -201,7 +140,81 @@ function ProfilePageContent() {
                   ></div>
                 </div>
               </div>
-            </div>
+
+              {/* Actionable Section List */}
+              <ul className="space-y-2">
+                {sections.map((section) => {
+                  const isCompleted = getCompletionStatus(section.id as ProfileSection);
+                  const sectionCompleteness = completeness.sections.find(s => s.id === section.id);
+                  const hasIssues = sectionCompleteness?.issues.length > 0;
+
+                  return (
+                    <li key={section.id}>
+                      <button
+                        onClick={() => setActiveSection(section.id as ProfileSection)}
+                        className={`w-full text-left rounded-lg transition-all p-3 ${
+                          activeSection === section.id
+                            ? 'bg-gradient-to-r from-teal-50 to-blue-50 text-teal-700 border border-teal-200 shadow-sm'
+                            : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <span className="text-lg mr-3">{section.icon}</span>
+                            <div>
+                              <span className="font-medium block">{section.label}</span>
+                              {hasIssues && !isCompleted && (
+                                <span className="text-xs text-gray-500">
+                                  {sectionCompleteness.issues[0]}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {isCompleted ? (
+                              <div className="flex items-center text-xs text-green-600 font-medium">
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                <span className="hidden sm:inline">Complete</span>
+                              </div>
+                            ) : hasIssues ? (
+                              <div className="text-xs text-amber-600 font-medium">
+                                {sectionCompleteness.estimatedTime}
+                              </div>
+                            ) : (
+                              <div className="w-3 h-3 rounded-full bg-gray-300"></div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* Quick Actions for Incomplete Items */}
+              {completeness.overall.percentage < 100 && (
+                <div className="mt-6 pt-4 border-t border-gray-100">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Actions</h4>
+                  <div className="space-y-2">
+                    {completeness.sections
+                      .filter(section => section.priority === 'high' && section.issues.length > 0)
+                      .slice(0, 2)
+                      .map((section) => (
+                        <button
+                          key={section.id}
+                          onClick={() => setActiveSection(section.id as ProfileSection)}
+                          className="w-full text-left p-2 rounded border border-teal-200 bg-teal-50 hover:bg-teal-100 transition-colors"
+                        >
+                          <div className="text-sm font-medium text-teal-800">{section.name}</div>
+                          <div className="text-xs text-teal-600">{section.suggestions[0]}</div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </nav>
           </div>
 
           {/* Enhanced Main Content */}
