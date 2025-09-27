@@ -142,7 +142,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     LinkedIn: ${profile.personalInfo.linkedin || 'N/A'}
     Professional Overview: ${profile.personalInfo.professionalOverview || 'Professional with relevant experience'}
 
-    DETAILED EXPERIENCE:
+    DETAILED EXPERIENCE (MUST include all company names and dates prominently):
     ${profile.experience.map(exp => `
     Position: ${exp.position}
     Company: ${exp.company}
@@ -178,6 +178,9 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - Groups related skills logically
 
     3. **PROFESSIONAL EXPERIENCE**: For each role:
+       - Format as: **Job Title**, **Company Name** | Location, *Start Date - End Date*
+       - Make job titles and company names bold and prominent
+       - Include full employment dates (month/year format)
        - Write compelling bullet points (4-6 per role for most recent)
        - Start each bullet with strong action verbs
        - Quantify achievements with specific metrics where possible
@@ -202,6 +205,21 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     - Consistent formatting
     - ATS-friendly (no tables, graphics, or unusual formatting)
     - 1-2 pages length
+
+    CRITICAL FORMATTING REQUIREMENTS:
+    - ALWAYS include company names prominently for each position
+    - ALWAYS include employment dates (start and end dates)
+    - Format experience entries as: **Job Title**, **Company Name** | Location, *Month Year - Month Year*
+    - Company names and dates MUST be clearly visible and prominent
+    - This is essential information that recruiters need to see immediately
+
+    EXAMPLE FORMAT:
+    **Senior Software Engineer**
+    **Google Inc.** | Mountain View, CA
+    *January 2020 - Present*
+
+    • Developed scalable web applications using React and Node.js
+    • Led a team of 5 engineers to deliver critical features on time
 
     IMPORTANT: Return ONLY the complete resume content. No explanations or meta-commentary. The output must be ready to send directly to a recruiter.
   `;
@@ -441,8 +459,9 @@ function generateTailoredResume(profile: UserProfile, jobTitle: string, companyN
 
     const allAchievements = [...baseAchievements, ...additionalAchievements];
 
-    return `${exp.position} | ${exp.company} | ${exp.location}
-${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}
+    return `**${exp.position}**
+**${exp.company}** | ${exp.location}
+*${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}*
 
 ${exp.description}
 
