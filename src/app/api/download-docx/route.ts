@@ -85,6 +85,7 @@ function createResumeDocument(content: string, profile?: any): Document {
     if (cleanLine === cleanLine.toUpperCase() &&
         (cleanLine.includes('PROFESSIONAL SUMMARY') ||
          cleanLine.includes('CORE COMPETENCIES') ||
+         cleanLine.includes('SKILLS INVENTORY') ||
          cleanLine.includes('PROFESSIONAL EXPERIENCE') ||
          cleanLine.includes('EDUCATION'))) {
 
