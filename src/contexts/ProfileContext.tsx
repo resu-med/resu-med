@@ -303,11 +303,18 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!authState.user?.email) return;
 
-    // Skip auto-save for initial/empty profiles
-    if (!state.profile.personalInfo.firstName &&
-        state.profile.experience.length === 0 &&
-        state.profile.education.length === 0 &&
-        state.profile.skills.length === 0) {
+    // Skip auto-save for completely empty profiles
+    const hasAnyData =
+      state.profile.personalInfo.firstName ||
+      state.profile.personalInfo.lastName ||
+      state.profile.personalInfo.phone ||
+      state.profile.personalInfo.location ||
+      state.profile.experience.length > 0 ||
+      state.profile.education.length > 0 ||
+      state.profile.skills.length > 0 ||
+      state.profile.interests.length > 0;
+
+    if (!hasAnyData) {
       return;
     }
 
