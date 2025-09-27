@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,19 @@ interface GeneratedContent {
   analysis: JobAnalysis;
 }
 
+// Local storage keys
+const STORAGE_KEYS = {
+  JOB_DESCRIPTION: 'resumed_templates_job_description',
+  COMPANY_NAME: 'resumed_templates_company_name',
+  JOB_TITLE: 'resumed_templates_job_title',
+  GENERATED_CONTENT: 'resumed_templates_generated_content',
+  ACTIVE_TAB: 'resumed_templates_active_tab',
+  TIMESTAMP: 'resumed_templates_timestamp'
+};
+
+// Cache duration (1 hour)
+const CACHE_DURATION = 60 * 60 * 1000;
+
 function TemplatesPageContent() {
   const { state } = useProfile();
   const { state: authState, logout } = useAuth();
@@ -33,6 +46,101 @@ function TemplatesPageContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
   const [activeTab, setActiveTab] = useState<'resume' | 'cover-letter'>('resume');
+
+  // Load persisted data on component mount
+  useEffect(() => {
+    loadPersistedData();
+  }, []);
+
+  // Save form data whenever it changes
+  useEffect(() => {
+    saveFormData();
+  }, [jobDescription, companyName, jobTitle]);
+
+  // Save generated content and active tab when they change
+  useEffect(() => {
+    if (generatedContent) {
+      saveGeneratedContent();
+    }
+  }, [generatedContent, activeTab]);
+
+  const loadPersistedData = () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const timestamp = localStorage.getItem(STORAGE_KEYS.TIMESTAMP);
+
+      if (timestamp) {
+        const dataAge = Date.now() - parseInt(timestamp);
+
+        // Only load if data is less than 1 hour old
+        if (dataAge < CACHE_DURATION) {
+          // Load form data
+          const savedJobDescription = localStorage.getItem(STORAGE_KEYS.JOB_DESCRIPTION);
+          const savedCompanyName = localStorage.getItem(STORAGE_KEYS.COMPANY_NAME);
+          const savedJobTitle = localStorage.getItem(STORAGE_KEYS.JOB_TITLE);
+          const savedActiveTab = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB);
+          const savedGeneratedContent = localStorage.getItem(STORAGE_KEYS.GENERATED_CONTENT);
+
+          if (savedJobDescription) setJobDescription(savedJobDescription);
+          if (savedCompanyName) setCompanyName(savedCompanyName);
+          if (savedJobTitle) setJobTitle(savedJobTitle);
+          if (savedActiveTab) setActiveTab(savedActiveTab as 'resume' | 'cover-letter');
+
+          if (savedGeneratedContent) {
+            try {
+              const parsedContent = JSON.parse(savedGeneratedContent);
+              setGeneratedContent(parsedContent);
+              console.log('✅ Restored templates data:', {
+                hasFormData: !!(savedJobDescription || savedCompanyName || savedJobTitle),
+                hasGeneratedContent: !!savedGeneratedContent
+              });
+            } catch (error) {
+              console.error('Error parsing saved generated content:', error);
+            }
+          }
+        } else {
+          console.log('⚠️ Templates data expired, clearing cache');
+          clearPersistedData();
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading persisted templates data:', error);
+    }
+  };
+
+  const saveFormData = () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.JOB_DESCRIPTION, jobDescription);
+      localStorage.setItem(STORAGE_KEYS.COMPANY_NAME, companyName);
+      localStorage.setItem(STORAGE_KEYS.JOB_TITLE, jobTitle);
+      localStorage.setItem(STORAGE_KEYS.TIMESTAMP, Date.now().toString());
+    } catch (error) {
+      console.error('❌ Error saving form data:', error);
+    }
+  };
+
+  const saveGeneratedContent = () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.GENERATED_CONTENT, JSON.stringify(generatedContent));
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, activeTab);
+      localStorage.setItem(STORAGE_KEYS.TIMESTAMP, Date.now().toString());
+    } catch (error) {
+      console.error('❌ Error saving generated content:', error);
+    }
+  };
+
+  const clearPersistedData = () => {
+    if (typeof window === 'undefined') return;
+
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+  };
 
   const handleAnalyzeAndGenerate = async () => {
     if (!jobDescription.trim() || !jobTitle.trim()) {
@@ -183,8 +291,31 @@ function TemplatesPageContent() {
                 <p className="text-sm text-gray-600 mt-1">
                   Provide job details to generate perfectly matched resume and cover letter
                 </p>
+                {(jobDescription || companyName || jobTitle || generatedContent) && (
+                  <p className="text-xs text-green-600 mt-1">
+                    💾 Form data and generated content are automatically saved and will persist when you navigate between tabs
+                  </p>
+                )}
               </div>
-              <div className="text-2xl">🎯</div>
+              <div className="flex items-center space-x-3">
+                {(jobDescription || companyName || jobTitle || generatedContent) && (
+                  <button
+                    onClick={() => {
+                      setJobDescription('');
+                      setCompanyName('');
+                      setJobTitle('');
+                      setGeneratedContent(null);
+                      setActiveTab('resume');
+                      clearPersistedData();
+                    }}
+                    className="px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                    title="Clear all data"
+                  >
+                    🗑️ Clear
+                  </button>
+                )}
+                <div className="text-2xl">🎯</div>
+              </div>
             </div>
           </div>
 
