@@ -202,7 +202,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - Shows how their actual skills transfer to the role
        - Uses keywords from job description only for skills/experience they actually possess
 
-    2. **SKILLS INVENTORY**: Create a skills section that:
+    2. **CORE COMPETENCIES**: Create a skills section that:
        - ONLY use skills the candidate ACTUALLY has from their profile
        - NEVER add skills the candidate doesn't possess
        - NEVER invent technical skills to match job requirements
@@ -243,7 +243,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
 
     FORMAT REQUIREMENTS:
     - Clean, professional layout
-    - Standard section headers (PROFESSIONAL SUMMARY, SKILLS INVENTORY, PROFESSIONAL EXPERIENCE, EDUCATION)
+    - Standard section headers (PROFESSIONAL SUMMARY, CORE COMPETENCIES, SKILLS INVENTORY, PROFESSIONAL EXPERIENCE, EDUCATION)
     - Consistent formatting
     - ATS-friendly (no tables, graphics, or unusual formatting)
     - 1-2 pages length
@@ -743,8 +743,11 @@ ${personalInfo.website ? `Portfolio: ${personalInfo.website}` : ''}
 PROFESSIONAL SUMMARY
 ${professionalSummary}
 
-SKILLS INVENTORY
+CORE COMPETENCIES
 ${buildSkillsSection()}
+
+SKILLS INVENTORY
+${profile.skills.map(skill => `${skill.name} (${skill.level} - ${skill.category})`).join(' • ')}
 
 PROFESSIONAL EXPERIENCE
 
