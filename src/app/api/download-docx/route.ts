@@ -928,314 +928,130 @@ function parseEducationSection(lines: string[]): any[] {
 function createCoverLetterDocument(content: string, profile?: any): Document {
   const children: Paragraph[] = [];
 
-  // Extract components from cover letter content for proper formatting
-  let recipientInfo = '';
-  let salutation = '';
-  let letterBody = '';
-  let closing = '';
-  let signature = '';
+  // Split content exactly as it appears in the web UI (preserving line breaks)
+  // The web UI uses whitespace-pre-line which preserves \n as line breaks
+  const lines = content.split('\n');
 
-  // Parse the cover letter content to extract structured components
-  const contentLines = content.split('\n').filter(line => line.trim());
+  // Convert each line to a Word paragraph with appropriate formatting
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
 
-  // Find different sections of the letter
-  let currentSection = 'header';
-  let bodyParagraphs: string[] = [];
-  let currentParagraph = '';
+    // Empty lines create spacing
+    if (line.trim() === '') {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: '', size: 22 })],
+          spacing: { after: 150 }
+        })
+      );
+      continue;
+    }
 
-  for (let i = 0; i < contentLines.length; i++) {
-    const line = contentLines[i].trim();
+    // Determine formatting based on content
+    let isHeader = false;
+    let isDate = false;
+    let isRecipient = false;
+    let isSalutation = false;
+    let isClosing = false;
+    let isSignature = false;
+    let alignment = AlignmentType.LEFT;
+    let isBold = false;
+    let fontSize = 22;
+    let color = "000000";
 
-    // Skip personal info lines that are duplicated in profile
+    // Header detection (name, contact info)
     if (profile?.personalInfo) {
       const { firstName, lastName, email, phone, location } = profile.personalInfo;
-      if (line.includes(firstName) && line.includes(lastName) && line.includes(email)) continue;
-      if (line.includes(email) && line.includes(phone)) continue;
-      if (line.includes('LinkedIn:')) continue;
-      if (line.includes('Portfolio:')) continue;
-      if (/^\w+\s+\d{1,2},\s+\d{4}$/.test(line)) continue; // Skip date lines
+
+      // Name line
+      if (firstName && lastName && line.includes(firstName) && line.includes(lastName) &&
+          !line.includes(email) && !line.toLowerCase().includes('sincerely')) {
+        isHeader = true;
+        isBold = true;
+        fontSize = 28;
+        color = "1F4E79";
+      }
+      // Email or phone line
+      else if ((email && line.includes(email)) || (phone && line.includes(phone))) {
+        isHeader = true;
+        fontSize = 20;
+        color = "666666";
+      }
+      // Location line
+      else if (location && line.includes(location) && !line.includes(email)) {
+        isHeader = true;
+        fontSize = 20;
+        color = "666666";
+      }
+      // LinkedIn line
+      else if (line.toLowerCase().includes('linkedin:')) {
+        isHeader = true;
+        fontSize = 18;
+        color = "0066CC";
+      }
     }
 
-    // Identify recipient/company info
+    // Date detection (formatted date at top right)
+    if (/^\w+\s+\d{1,2},\s+\d{4}$/.test(line.trim())) {
+      isDate = true;
+      alignment = AlignmentType.RIGHT;
+    }
+
+    // Recipient info (company/hiring team)
     if (line.includes('Hiring Team') || line.includes('Re:')) {
-      if (currentSection === 'header') {
-        recipientInfo += line + '\n';
-        continue;
-      }
+      isRecipient = true;
+      fontSize = 22;
     }
 
-    // Identify salutation
-    if (line.startsWith('Dear ')) {
-      salutation = line;
-      currentSection = 'body';
-      continue;
+    // Salutation
+    if (line.trim().startsWith('Dear ')) {
+      isSalutation = true;
+      fontSize = 22;
     }
 
-    // Identify closing
-    if (line.toLowerCase().includes('sincerely') || line.toLowerCase().includes('best regards') ||
-        line.toLowerCase().includes('thank you for') && line.toLowerCase().includes('considering')) {
-      if (currentParagraph) {
-        bodyParagraphs.push(currentParagraph.trim());
-        currentParagraph = '';
-      }
-      currentSection = 'closing';
-      closing += line + '\n';
-      continue;
+    // Closing detection
+    if (line.toLowerCase().includes('sincerely') ||
+        line.toLowerCase().includes('best regards') ||
+        (line.toLowerCase().includes('thank you') && line.toLowerCase().includes('considering'))) {
+      isClosing = true;
+      fontSize = 22;
     }
 
-    // Handle signature (name at the end)
-    if (currentSection === 'closing' && profile?.personalInfo) {
+    // Signature (name at end, usually after sincerely)
+    if (profile?.personalInfo && i > 0) {
       const { firstName, lastName } = profile.personalInfo;
-      if (line.includes(firstName) && line.includes(lastName)) {
-        signature = line;
-        continue;
+      const prevLine = lines[i-1] || '';
+      if (firstName && lastName && line.includes(firstName) && line.includes(lastName) &&
+          (prevLine.toLowerCase().includes('sincerely') || prevLine.toLowerCase().includes('regards'))) {
+        isSignature = true;
+        isBold = true;
+        fontSize = 22;
       }
     }
 
-    // Build body paragraphs
-    if (currentSection === 'body' || currentSection === 'closing') {
-      if (line.length > 0) {
-        if (currentParagraph) {
-          currentParagraph += ' ' + line;
-        } else {
-          currentParagraph = line;
-        }
-      } else {
-        // Empty line indicates paragraph break
-        if (currentParagraph) {
-          if (currentSection === 'body') {
-            bodyParagraphs.push(currentParagraph.trim());
-          } else {
-            closing += currentParagraph.trim() + '\n';
-          }
-          currentParagraph = '';
-        }
-      }
-    }
-  }
+    // Create the paragraph with appropriate spacing
+    let spacingAfter = 100;
+    if (isHeader && fontSize === 28) spacingAfter = 150; // Name
+    else if (isHeader) spacingAfter = 80; // Contact info
+    else if (isDate) spacingAfter = 300; // Date
+    else if (isRecipient) spacingAfter = 200; // Company info
+    else if (isSalutation) spacingAfter = 200; // Dear...
+    else if (isClosing) spacingAfter = 200; // Closing
+    else if (isSignature) spacingAfter = 100; // Signature
+    else spacingAfter = 200; // Body paragraphs
 
-  // Add any remaining paragraph
-  if (currentParagraph) {
-    if (currentSection === 'body') {
-      bodyParagraphs.push(currentParagraph.trim());
-    } else {
-      closing += currentParagraph.trim();
-    }
-  }
-
-  // 1. PERSONAL HEADER - Professional contact information
-  if (profile?.personalInfo) {
-    const personalInfo = profile.personalInfo;
-
-    // Full name - prominent header
-    if (personalInfo.firstName || personalInfo.lastName) {
-      const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim();
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: fullName,
-              bold: true,
-              size: 32,
-              color: "1F4E79"
-            })
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 120 }
-        })
-      );
-    }
-
-    // Address/Location
-    if (personalInfo.location) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: personalInfo.location,
-              size: 22
-            })
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 100 }
-        })
-      );
-    }
-
-    // Email
-    if (personalInfo.email) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: personalInfo.email,
-              size: 22
-            })
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 100 }
-        })
-      );
-    }
-
-    // Phone
-    if (personalInfo.phone) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: personalInfo.phone,
-              size: 22
-            })
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 100 }
-        })
-      );
-    }
-
-    // LinkedIn
-    if (personalInfo.linkedin) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: personalInfo.linkedin,
-              size: 22,
-              color: "0066CC"
-            })
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 400 }
-        })
-      );
-    } else {
-      // Add extra spacing if no LinkedIn
-      const lastParagraph = children[children.length - 1];
-      if (lastParagraph) {
-        lastParagraph.spacing = { after: 400 };
-      }
-    }
-  }
-
-  // 2. DATE - Right aligned
-  children.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          }),
-          size: 22
-        })
-      ],
-      alignment: AlignmentType.RIGHT,
-      spacing: { after: 400 }
-    })
-  );
-
-  // 3. RECIPIENT INFO - if found in content
-  if (recipientInfo.trim()) {
-    recipientInfo.split('\n').forEach(line => {
-      if (line.trim()) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: line.trim(),
-                size: 22
-              })
-            ],
-            alignment: AlignmentType.LEFT,
-            spacing: { after: 100 }
-          })
-        );
-      }
-    });
-    children.push(new Paragraph({ spacing: { after: 300 } })); // Extra space after recipient
-  }
-
-  // 4. SALUTATION
-  if (salutation) {
     children.push(
       new Paragraph({
         children: [
           new TextRun({
-            text: salutation,
-            size: 22
+            text: line,
+            size: fontSize,
+            bold: isBold,
+            color: color
           })
         ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 300 }
-      })
-    );
-  }
-
-  // 5. BODY PARAGRAPHS - Each paragraph properly spaced
-  bodyParagraphs.forEach(paragraph => {
-    if (paragraph.trim()) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: paragraph.trim(),
-              size: 22
-            })
-          ],
-          spacing: { after: 300 },
-          alignment: AlignmentType.JUSTIFIED
-        })
-      );
-    }
-  });
-
-  // 6. CLOSING
-  if (closing.trim()) {
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: closing.trim(),
-            size: 22
-          })
-        ],
-        spacing: { after: 400 },
-        alignment: AlignmentType.LEFT
-      })
-    );
-  }
-
-  // 7. SIGNATURE
-  if (signature) {
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: signature,
-            size: 22,
-            bold: true
-          })
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 200 }
-      })
-    );
-  } else if (profile?.personalInfo?.firstName && profile?.personalInfo?.lastName) {
-    // Fallback signature from profile
-    const fullName = `${profile.personalInfo.firstName} ${profile.personalInfo.lastName}`;
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: fullName,
-            size: 22,
-            bold: true
-          })
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 200 }
+        alignment: alignment,
+        spacing: { after: spacingAfter }
       })
     );
   }
