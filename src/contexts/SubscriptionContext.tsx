@@ -153,7 +153,36 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // Sync with authenticated user
   useEffect(() => {
     if (authState.isAuthenticated && authState.user) {
-      dispatch({ type: 'SET_USER', payload: authState.user });
+      // Convert AuthContext user to SubscriptionContext user with defaults
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const userWithSubscription = {
+        id: authState.user.id.toString(),
+        email: authState.user.email,
+        name: authState.user.name,
+        subscription: {
+          id: 'sub-' + authState.user.id,
+          userId: authState.user.id.toString(),
+          planId: 'free',
+          tier: 'free' as SubscriptionTier,
+          status: 'active',
+          currentPeriodStart: new Date().toISOString(),
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          cancelAtPeriodEnd: false,
+          createdAt: authState.user.createdAt,
+          updatedAt: new Date().toISOString()
+        },
+        usage: {
+          userId: authState.user.id.toString(),
+          month: currentMonth,
+          jobSearches: 0,
+          aiOptimizations: 0,
+          coverLettersGenerated: 0,
+          profileExports: 0,
+          lastResetDate: new Date().toISOString()
+        },
+        createdAt: authState.user.createdAt
+      };
+      dispatch({ type: 'SET_USER', payload: userWithSubscription });
     } else {
       dispatch({ type: 'LOGOUT' });
     }
