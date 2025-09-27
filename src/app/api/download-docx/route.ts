@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     let doc: Document;
 
     if (type === 'resume') {
-      doc = createResumeDocument(content, profile);
+      doc = await createResumeDocument(content, profile);
     } else if (type === 'cover-letter') {
       doc = createCoverLetterDocument(content, profile);
     } else {
@@ -46,360 +46,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function createResumeDocument(content: string, profile?: any): Document {
-  console.log('📄 Creating resume document, content length:', content.length);
+async function createResumeDocument(content: string, profile?: any): Promise<Document> {
+  console.log('📄 Creating AI-powered resume document, content length:', content.length);
 
   const children: Paragraph[] = [];
 
   // Add personal information header from profile if available
   if (profile?.personalInfo) {
-    const personalInfo = profile.personalInfo;
-
-    // Add full name as header
-    if (personalInfo.firstName || personalInfo.lastName) {
-      const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim();
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: fullName,
-              bold: true,
-              size: 36,
-              color: "1F4E79"
-            })
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 200 }
-        })
-      );
-    }
-
-    // Add contact information
-    const contactParts = [];
-    if (personalInfo.email) contactParts.push(personalInfo.email);
-    if (personalInfo.phone) contactParts.push(personalInfo.phone);
-    if (personalInfo.location) contactParts.push(personalInfo.location);
-
-    if (contactParts.length > 0) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: contactParts.join(' | '),
-              size: 22,
-              color: "666666"
-            })
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 200 }
-        })
-      );
-    }
-
-    // Add social links if available
-    const socialParts = [];
-    if (personalInfo.linkedin) socialParts.push(personalInfo.linkedin);
-    if (personalInfo.website) socialParts.push(personalInfo.website);
-    if (personalInfo.github) socialParts.push(personalInfo.github);
-
-    if (socialParts.length > 0) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: socialParts.join(' | '),
-              size: 20,
-              color: "666666"
-            })
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 400 }
-        })
-      );
-    }
-
-    // Add professional overview if available
-    if (personalInfo.professionalOverview) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: personalInfo.professionalOverview,
-              size: 22
-            })
-          ],
-          spacing: { after: 400 },
-          alignment: AlignmentType.JUSTIFIED
-        })
-      );
-    }
+    children.push(...createPersonalInfoSection(profile.personalInfo));
   }
 
-  // Split content into lines and process each line
-  const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  // Use AI to intelligently parse the resume content
+  const parsedSections = await parseResumeWithAI(content);
 
-  console.log('📄 Total lines to process:', lines.length);
-  console.log('📄 First few lines:', lines.slice(0, 5));
-
-  // Process content lines (skip old name/contact detection since we use profile data now)
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Skip lines that look like name or contact info since we handle those from profile
-    if (!line.includes('@') && !line.includes('|') && !line.startsWith('**') &&
-        !/^(PROFESSIONAL SUMMARY|CORE COMPETENCIES|PRIMARY SKILLS)$/i.test(line) &&
-        i < 3 && !profile?.personalInfo) {
-      // Only use content for name/contact if no profile data available
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: line,
-              bold: true,
-              size: 36,
-              color: "1F4E79"
-            })
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 200 }
-        })
-      );
-      continue;
-    }
-
-    // Skip contact info lines if we have profile data
-    if ((line.includes('@') || line.includes('|') || /\d{3}/.test(line)) &&
-        !line.startsWith('**') && !line.includes('Lead') && !line.includes('Director') &&
-        profile?.personalInfo) {
-      continue;
-    }
-
-    // Detect section headers with **
-    if (line.startsWith('**') && line.endsWith('**')) {
-      const headerText = line.replace(/\*\*/g, '').trim();
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: headerText,
-              bold: true,
-              size: 28,
-              color: "1F4E79"
-            })
-          ],
-          spacing: { before: 400, after: 200 },
-          border: {
-            bottom: {
-              color: "1F4E79",
-              space: 1,
-              style: BorderStyle.SINGLE,
-              size: 6
-            }
-          }
-        })
-      );
-      continue;
-    }
-
-    // Detect other section headers
-    const isHeader = /^(PROFESSIONAL SUMMARY|CORE COMPETENCIES|PRIMARY SKILLS|ADDITIONAL SKILLS|OTHER PROFICIENCIES|PROFESSIONAL EXPERIENCE|EDUCATION)$/i.test(line);
-
-    if (isHeader) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: line,
-              bold: true,
-              size: 28,
-              color: "1F4E79"
-            })
-          ],
-          spacing: { before: 400, after: 200 },
-          border: {
-            bottom: {
-              color: "1F4E79",
-              space: 1,
-              style: BorderStyle.SINGLE,
-              size: 6
-            }
-          }
-        })
-      );
-      continue;
-    }
-
-    // Check if this is a date line (contains years and Present/dates)
-    if (/\*\d{4}-\d{2}-\d{2}/.test(line) || (line.includes('Present') && line.includes('*'))) {
-      const dateText = line.replace(/\*/g, '').trim();
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: dateText,
-              italic: true,
-              size: 20,
-              color: "666666"
-            })
-          ],
-          alignment: AlignmentType.RIGHT,
-          spacing: { after: 200 }
-        })
-      );
-      continue;
-    }
-
-    // Detect date ranges in plain text format (like "January 2020 - Present")
-    if ((line.includes(' - ') && (line.includes('Present') || /\d{4}/.test(line))) ||
-        (/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/.test(line))) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: line,
-              italic: true,
-              size: 20,
-              color: "666666"
-            })
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 200 }
-        })
-      );
-      continue;
-    }
-
-    // Job titles and company info (contains | but not dates)
-    if (line.includes('|') && !line.startsWith('•') && !line.startsWith('-') &&
-        !/\d{4}-\d{2}-\d{2}/.test(line) && !line.includes('Present')) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: line,
-              bold: true,
-              size: 24,
-              color: "2D4A6B"
-            })
-          ],
-          spacing: { before: 300, after: 50 }
-        })
-      );
-      continue;
-    }
-
-    // Detect standalone job titles (line before company/location line)
-    // Job title is usually on its own line, followed by company | location line
-    if (i < lines.length - 1) {
-      const nextLine = lines[i + 1];
-
-      // If current line doesn't contain special characters and next line has |
-      if (!line.includes('|') && !line.includes('@') && !line.includes('•') &&
-          !line.includes('-') && !line.includes(':') &&
-          nextLine && nextLine.includes('|') && !nextLine.includes('Present') &&
-          !/^\d{4}/.test(nextLine) && !/\d{4}-\d{2}-\d{2}/.test(nextLine) &&
-          !isHeader && line.length > 3 && line.length < 100) {
-
-        // This looks like a job title
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: line,
-                bold: true,
-                size: 26,
-                color: "1F4E79"
-              })
-            ],
-            spacing: { before: 400, after: 100 }
-          })
-        );
-        continue;
-      }
-    }
-
-    // Bullet points and achievements
-    if (line.startsWith('•') || line.startsWith('-')) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: line.startsWith('-') ? `• ${line.substring(1).trim()}` : line,
-              size: 22
-            })
-          ],
-          spacing: { after: 120 },
-          indent: { left: 360 } // Indent bullet points
-        })
-      );
-      continue;
-    }
-
-    // Skills sections that start with specific patterns
-    if (line.startsWith('Primary Skills:') || line.startsWith('Additional Skills:') ||
-        line.startsWith('Other Proficiencies:') || line.startsWith('Technical Skills:')) {
-      const [label, ...skillsParts] = line.split(':');
-      const skills = skillsParts.join(':').trim();
-
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: label + ':',
-              bold: true,
-              size: 22,
-              color: "2D4A6B"
-            })
-          ],
-          spacing: { before: 200, after: 100 }
-        })
-      );
-
-      if (skills) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: skills,
-                size: 22
-              })
-            ],
-            spacing: { after: 150 },
-            indent: { left: 360 }
-          })
-        );
-      }
-      continue;
-    }
-
-    // Regular content paragraphs
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: line,
-            size: 22
-          })
-        ],
-        spacing: { after: 150 },
-        alignment: AlignmentType.JUSTIFIED
-      })
-    );
-  }
-
-  // If no content was processed, add a fallback
-  if (children.length === 0) {
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Resume content could not be processed. Please check the generated content.",
-            size: 22
-          })
-        ]
-      })
-    );
-  }
+  // Add each parsed section to the document
+  children.push(...createDocumentSections(parsedSections));
 
   return new Document({
     sections: [{
@@ -416,6 +77,294 @@ function createResumeDocument(content: string, profile?: any): Document {
       children
     }]
   });
+}
+
+function createPersonalInfoSection(personalInfo: any): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+
+  // Add full name as header
+  if (personalInfo.firstName || personalInfo.lastName) {
+    const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim();
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            size: 36,
+            color: "1F4E79"
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200 }
+      })
+    );
+  }
+
+  // Add contact information
+  const contactParts = [];
+  if (personalInfo.email) contactParts.push(personalInfo.email);
+  if (personalInfo.phone) contactParts.push(personalInfo.phone);
+  if (personalInfo.location) contactParts.push(personalInfo.location);
+
+  if (contactParts.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: contactParts.join(' | '),
+            size: 22,
+            color: "666666"
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 }
+      })
+    );
+  }
+
+  return paragraphs;
+}
+
+async function parseResumeWithAI(content: string): Promise<any> {
+  try {
+    // If OpenAI is available, use it for intelligent parsing
+    if (process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+      const OpenAI = (await import('openai')).default;
+      const openai = new OpenAI({
+        apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+      });
+
+      const prompt = `
+        Parse this resume content and extract the structured information. Return a JSON object with the following structure:
+
+        {
+          "sections": [
+            {
+              "type": "header", // "header", "experience", "education", "skills", "other"
+              "title": "PROFESSIONAL EXPERIENCE",
+              "content": [
+                {
+                  "type": "job", // "job", "education", "skill-group", "text"
+                  "jobTitle": "Senior Software Engineer",
+                  "company": "Google Inc.",
+                  "location": "Mountain View, CA",
+                  "dates": "January 2020 - Present",
+                  "description": "Job description text",
+                  "achievements": ["Achievement 1", "Achievement 2"]
+                }
+              ]
+            }
+          ]
+        }
+
+        Resume content:
+        ${content}
+
+        Extract ALL job titles, company names, dates, and achievements. Be very careful to preserve exact company names and employment dates.
+      `;
+
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: 'You are an expert resume parser. Return only valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 2000
+      });
+
+      const parsed = JSON.parse(response.choices[0].message.content || '{}');
+      console.log('🤖 AI parsed resume structure:', JSON.stringify(parsed, null, 2));
+      return parsed;
+    }
+  } catch (error) {
+    console.error('❌ AI parsing failed:', error);
+  }
+
+  // Fallback to simple text parsing
+  return parseResumeContentFallback(content);
+}
+
+function createDocumentSections(parsedData: any): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+
+  if (!parsedData.sections) {
+    return createFallbackDocument(parsedData);
+  }
+
+  for (const section of parsedData.sections) {
+    // Add section header
+    if (section.title) {
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: section.title,
+              bold: true,
+              size: 28,
+              color: "1F4E79"
+            })
+          ],
+          spacing: { before: 400, after: 200 },
+          border: {
+            bottom: {
+              color: "1F4E79",
+              space: 1,
+              style: BorderStyle.SINGLE,
+              size: 6
+            }
+          }
+        })
+      );
+    }
+
+    // Add section content
+    if (section.content) {
+      for (const item of section.content) {
+        if (item.type === 'job') {
+          // Add job title
+          if (item.jobTitle) {
+            paragraphs.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: item.jobTitle,
+                    bold: true,
+                    size: 26,
+                    color: "1F4E79"
+                  })
+                ],
+                spacing: { before: 300, after: 100 }
+              })
+            );
+          }
+
+          // Add company and location
+          if (item.company || item.location) {
+            const companyInfo = [item.company, item.location].filter(Boolean).join(' | ');
+            paragraphs.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: companyInfo,
+                    bold: true,
+                    size: 22,
+                    color: "2D4A6B"
+                  })
+                ],
+                spacing: { after: 100 }
+              })
+            );
+          }
+
+          // Add dates
+          if (item.dates) {
+            paragraphs.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: item.dates,
+                    italic: true,
+                    size: 20,
+                    color: "666666"
+                  })
+                ],
+                spacing: { after: 200 }
+              })
+            );
+          }
+
+          // Add description
+          if (item.description) {
+            paragraphs.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: item.description,
+                    size: 22
+                  })
+                ],
+                spacing: { after: 150 },
+                alignment: AlignmentType.JUSTIFIED
+              })
+            );
+          }
+
+          // Add achievements
+          if (item.achievements && item.achievements.length > 0) {
+            for (const achievement of item.achievements) {
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: achievement.startsWith('•') ? achievement : `• ${achievement}`,
+                      size: 22
+                    })
+                  ],
+                  spacing: { after: 120 },
+                  indent: { left: 360 }
+                })
+              );
+            }
+          }
+        } else if (item.type === 'text') {
+          paragraphs.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: item.content || item.text || '',
+                  size: 22
+                })
+              ],
+              spacing: { after: 150 },
+              alignment: AlignmentType.JUSTIFIED
+            })
+          );
+        }
+      }
+    }
+  }
+
+  return paragraphs;
+}
+
+function createFallbackDocument(content: any): Paragraph[] {
+  // Simple fallback if AI parsing fails
+  const lines = (typeof content === 'string' ? content : JSON.stringify(content))
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  return lines.map(line =>
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: line,
+          size: 22
+        })
+      ],
+      spacing: { after: 150 }
+    })
+  );
+}
+
+function parseResumeContentFallback(content: string): any {
+  // Simple fallback parsing when AI is not available
+  const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+  return {
+    sections: [
+      {
+        type: "other",
+        title: "Resume Content",
+        content: lines.map(line => ({
+          type: "text",
+          content: line
+        }))
+      }
+    ]
+  };
 }
 
 function createCoverLetterDocument(content: string, profile?: any): Document {
