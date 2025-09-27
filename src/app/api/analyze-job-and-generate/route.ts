@@ -123,7 +123,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
   const resumePrompt = `
     You are an expert resume writer specializing in ATS optimization and job-specific tailoring. Create a comprehensive, professional resume that will get past ATS systems and impress hiring managers.
 
-    TARGET POSITION:
+    TARGET POSITION (DO NOT include this as work experience - this is the job they are APPLYING FOR):
     Job Title: ${jobTitle}
     Company: ${companyName}
 
@@ -142,7 +142,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     LinkedIn: ${profile.personalInfo.linkedin || 'N/A'}
     Professional Overview: ${profile.personalInfo.professionalOverview || 'Professional with relevant experience'}
 
-    DETAILED EXPERIENCE (MUST include all company names and dates prominently, most recent first):
+    CANDIDATE'S ACTUAL WORK EXPERIENCE (ONLY use this existing experience - DO NOT create fake experience):
     ${[...profile.experience].sort((a, b) => {
       // Current roles first
       if (a.current && !b.current) return -1;
@@ -216,6 +216,8 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     - 1-2 pages length
 
     CRITICAL FORMATTING REQUIREMENTS:
+    - ONLY use the candidate's ACTUAL work experience provided above
+    - DO NOT include the target job (${jobTitle} at ${companyName}) as work experience
     - ALWAYS include company names prominently for each position
     - ALWAYS include employment dates (start and end dates)
     - Format experience entries as: Job Title, Company Name | Location, Month Year - Month Year
@@ -232,7 +234,11 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     • Developed scalable web applications using React and Node.js
     • Led a team of 5 engineers to deliver critical features on time
 
-    IMPORTANT: Return ONLY the complete resume content. No explanations or meta-commentary. The output must be ready to send directly to a recruiter.
+    IMPORTANT:
+    - Return ONLY the complete resume content using the candidate's ACTUAL experience
+    - DO NOT include ${jobTitle} at ${companyName} as work experience (this is the target job)
+    - No explanations or meta-commentary
+    - The output must be ready to send directly to a recruiter
   `;
 
   const resumeResponse = await openai.chat.completions.create({
