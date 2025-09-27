@@ -986,6 +986,14 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
 function formatDateRange(dateStr: string): string {
   if (!dateStr) return dateStr;
 
+  // Handle yyyy - mm format (year - month)
+  const yearMonthMatch = dateStr.match(/^(\d{4})\s*[-–—]\s*(\d{1,2})$/);
+  if (yearMonthMatch) {
+    const year = yearMonthMatch[1];
+    const month = yearMonthMatch[2].padStart(2, '0');
+    return `${month}/${year}`;
+  }
+
   // Handle "Present" dates
   if (dateStr.toLowerCase().includes('present')) {
     const parts = dateStr.split(/[-–—]/);
@@ -1012,6 +1020,14 @@ function formatDateRange(dateStr: string): string {
 
 function formatSingleDate(dateStr: string): string {
   if (!dateStr || dateStr.toLowerCase() === 'present') return dateStr;
+
+  // Handle numeric month format (e.g., "01", "02", etc.)
+  const numericMonthMatch = dateStr.match(/^(\d{1,2})$/);
+  if (numericMonthMatch) {
+    const monthNum = numericMonthMatch[1].padStart(2, '0');
+    // If it's just a month number, we need context from the range
+    return monthNum;
+  }
 
   // Month mappings
   const monthMap: { [key: string]: string } = {
