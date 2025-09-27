@@ -106,11 +106,13 @@ function createResumeDocument(content: string, profile?: any): Document {
         }
       }));
     }
-    // Job titles (contain | and job keywords) - clean asterisks
-    else if (line.includes('|') &&
+    // Job titles - detect various patterns for job titles
+    else if ((line.includes('|') &&
              (line.includes('Director') || line.includes('Manager') ||
               line.includes('Lead') || line.includes('Senior') ||
-              line.includes('Analyst') || line.includes('Engineer'))) {
+              line.includes('Analyst') || line.includes('Engineer'))) ||
+             // Also detect standalone job titles without |
+             (line.match(/^(Senior Manager|Product Owner|Senior BA|Financial Analyst|Account Manager)$/i))) {
 
       const cleanJobTitle = line.replace(/\*\*/g, '').trim();
       children.push(new Paragraph({
@@ -124,6 +126,26 @@ function createResumeDocument(content: string, profile?: any): Document {
           })
         ],
         spacing: { before: 300, after: 100 }
+      }));
+    }
+    // Company/location lines (after job titles)
+    else if (line.includes('|') &&
+             (line.includes('Belfast') || line.includes('Dublin') || line.includes('Coleraine') ||
+              line.includes('ESO Solutions') || line.includes('Expleo') || line.includes('Allstate') ||
+              line.includes('Liberty IT') || line.includes('Ulster Bank') || line.includes('Citi') ||
+              line.includes('BNP Paribas') || line.includes('University of Ulster'))) {
+
+      children.push(new Paragraph({
+        children: [
+          new TextRun({
+            text: line,
+            bold: true,
+            size: 20,
+            color: "2D4A6B",
+            font: "Calibri"
+          })
+        ],
+        spacing: { after: 100 }
       }));
     }
     // Date lines (contain years or Present)
