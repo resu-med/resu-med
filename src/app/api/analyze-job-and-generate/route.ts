@@ -245,29 +245,96 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     max_tokens: 3000
   });
 
-  // Generate tailored cover letter
+  // Generate highly targeted and compelling cover letter
   const coverLetterPrompt = `
-    Write a compelling, personalized cover letter for this job application:
+    Write an exceptional, highly personalized cover letter that will make the hiring manager excited to interview this candidate. This should be a strategic document that demonstrates clear value alignment and compelling qualifications.
 
+    POSITION DETAILS:
     Job Title: ${jobTitle}
     Company: ${companyName}
     Applicant: ${profile.personalInfo.firstName} ${profile.personalInfo.lastName}
 
-    Key points to address:
-    - Why they're interested in this specific role and company
-    - How their experience aligns with the job requirements: ${analysis.keyRequirements.slice(0, 3).join(', ')}
-    - Specific examples from their background: ${profile.experience.slice(0, 2).map(exp => `${exp.position} at ${exp.company}`).join(', ')}
-    - What value they can bring to the role
+    JOB REQUIREMENTS TO ADDRESS:
+    Key Requirements: ${analysis.keyRequirements?.join(' • ') || 'Role requirements'}
+    Required Skills: ${analysis.requiredSkills?.join(', ') || 'Technical skills'}
+    Preferred Skills: ${analysis.preferredSkills?.join(', ') || 'Additional skills'}
+    Company Info: ${analysis.companyInfo || 'Growing organization'}
+    Industry: ${analysis.industryType || 'Professional services'}
+    Role Level: ${analysis.roleLevel || 'mid'}
 
-    Make it:
-    - Professional but personable
-    - Specific to this job and company
-    - Concise (3-4 paragraphs)
-    - Compelling and action-oriented
+    CANDIDATE BACKGROUND TO LEVERAGE:
+    Professional Overview: ${profile.personalInfo.professionalOverview || 'Professional with relevant experience'}
 
-    Format as a complete cover letter ready to send.
+    Most Recent Experience:
+    ${[...profile.experience].sort((a, b) => {
+      if (a.current && !b.current) return -1;
+      if (!a.current && b.current) return 1;
+      const dateA = new Date(a.startDate || '1900-01-01');
+      const dateB = new Date(b.startDate || '1900-01-01');
+      return dateB.getTime() - dateA.getTime();
+    }).slice(0, 3).map(exp => `
+    • ${exp.jobTitle || exp.position} at ${exp.company} (${exp.startDate} - ${exp.current ? 'Present' : exp.endDate})
+      ${exp.description}
+      Key achievements: ${exp.achievements?.slice(0, 2).join(' | ') || 'Delivered exceptional results'}
+    `).join('')}
 
-    IMPORTANT: Return ONLY the cover letter content. Do NOT include any explanatory text, meta-commentary, or descriptions about the cover letter. The output should be ready to send to a recruiter as-is.
+    Relevant Skills: ${profile.skills.map(skill => `${skill.name} (${skill.level})`).join(', ')}
+
+    FORMATTING REQUIREMENTS:
+    Start with proper business letter formatting:
+    - Applicant's full name as header
+    - Contact information (location, email, phone, LinkedIn if available, portfolio if available)
+    - Current date
+    - Company name and "Re: [Job Title] Position"
+    - Proper salutation
+
+    WRITING INSTRUCTIONS:
+    Create a compelling 4-paragraph cover letter that:
+
+    PARAGRAPH 1 - COMPELLING OPENING:
+    - Open with genuine enthusiasm for the specific role and company
+    - Immediately establish credibility with your most relevant qualification
+    - Reference specific aspects of the company or role that appeal to you
+    - Create a strong hook that makes them want to keep reading
+
+    PARAGRAPH 2 - DIRECT QUALIFICATION MATCH:
+    - Systematically address the top 3-4 key requirements from the job posting
+    - For each requirement, provide a specific example of how you meet or exceed it
+    - Use concrete metrics, achievements, or outcomes from your experience
+    - Include relevant keywords from the job description naturally
+    - Show progression and growth in your career
+
+    PARAGRAPH 3 - VALUE PROPOSITION & COMPANY ALIGNMENT:
+    - Demonstrate understanding of the company's goals, values, or challenges
+    - Explain how your unique background/perspective adds value beyond basic qualifications
+    - Connect your past achievements to potential future contributions
+    - Show how you align with company culture and mission
+    - Address any preferred skills or bonus qualifications you possess
+
+    PARAGRAPH 4 - CONFIDENT CLOSE:
+    - Reinforce your enthusiasm and fit for the role
+    - Reference next steps or express eagerness to discuss further
+    - Thank them professionally
+    - End with confidence, not desperation
+
+    TONE & STYLE REQUIREMENTS:
+    - Professional yet personable and authentic
+    - Confident without being arrogant
+    - Specific and metrics-driven rather than generic
+    - Forward-looking and solution-oriented
+    - Demonstrate genuine research and interest in the company
+    - Use active voice and strong action verbs
+    - Avoid clichés and generic phrases
+
+    CRITICAL REQUIREMENTS:
+    - Address specific job requirements with concrete examples
+    - Include relevant metrics and achievements where possible
+    - Show clear understanding of the role and company
+    - Demonstrate value beyond just meeting basic qualifications
+    - Make it easy to see why you're the ideal candidate
+    - Keep it concise but substantive (under 400 words)
+
+    IMPORTANT: Return ONLY the complete cover letter content. No explanations or meta-commentary. The output must be ready to send directly to a hiring manager and should make them excited to interview this candidate.
   `;
 
   const coverLetterResponse = await openai.chat.completions.create({
@@ -312,6 +379,7 @@ async function generateWithIntelligentFallback(jobDescription: string, jobTitle:
 
 function generateFallbackAnalysis(jobDescription: string, jobTitle: string): JobAnalysis {
   const desc = jobDescription.toLowerCase();
+  const originalDesc = jobDescription;
 
   // Comprehensive skill and technology keywords
   const skillKeywords = [
@@ -347,7 +415,30 @@ function generateFallbackAnalysis(jobDescription: string, jobTitle: string): Job
     desc.includes(skill) || desc.includes(skill.replace('.js', '')) || desc.includes(skill.replace('-', ' '))
   );
 
-  const keyRequirements = [
+  // Enhanced key requirements extraction
+  const keyRequirements = [];
+
+  // Extract specific requirements from job description
+  const requirementIndicators = [
+    /required?:?\s*([^.!?\n]{10,100})/gi,
+    /must have:?\s*([^.!?\n]{10,100})/gi,
+    /essential:?\s*([^.!?\n]{10,100})/gi,
+    /looking for:?\s*([^.!?\n]{10,100})/gi,
+    /candidate will:?\s*([^.!?\n]{10,100})/gi,
+    /responsibilities include:?\s*([^.!?\n]{10,100})/gi
+  ];
+
+  requirementIndicators.forEach(pattern => {
+    const matches = [...originalDesc.matchAll(pattern)];
+    matches.forEach(match => {
+      if (match[1] && match[1].trim().length > 10) {
+        keyRequirements.push(match[1].trim());
+      }
+    });
+  });
+
+  // Add standard requirements if we didn't extract enough specific ones
+  const standardRequirements = [
     `Experience in ${jobTitle.toLowerCase()} or similar role`,
     'Strong technical and analytical skills',
     'Excellent communication and collaboration abilities',
@@ -356,7 +447,17 @@ function generateFallbackAnalysis(jobDescription: string, jobTitle: string): Job
   ];
 
   if (requiredSkills.length > 0) {
-    keyRequirements.unshift(`Proficiency in ${requiredSkills.slice(0, 3).join(', ')}`);
+    standardRequirements.unshift(`Proficiency in ${requiredSkills.slice(0, 3).join(', ')}`);
+  }
+
+  // Fill out requirements with standards if needed
+  while (keyRequirements.length < 5) {
+    const nextStandard = standardRequirements[keyRequirements.length];
+    if (nextStandard && !keyRequirements.some(req => req.toLowerCase().includes(nextStandard.toLowerCase().substring(0, 10)))) {
+      keyRequirements.push(nextStandard);
+    } else {
+      break;
+    }
   }
 
   // Determine role level
@@ -369,31 +470,63 @@ function generateFallbackAnalysis(jobDescription: string, jobTitle: string): Job
     roleLevel = 'executive';
   }
 
-  // Determine industry
+  // Determine industry with more nuance
   let industryType = 'Technology';
-  if (desc.includes('healthcare') || desc.includes('medical')) industryType = 'Healthcare';
-  else if (desc.includes('finance') || desc.includes('banking')) industryType = 'Finance';
-  else if (desc.includes('education') || desc.includes('teaching')) industryType = 'Education';
-  else if (desc.includes('marketing') || desc.includes('advertising')) industryType = 'Marketing';
-  else if (desc.includes('retail') || desc.includes('sales')) industryType = 'Retail';
+  if (desc.includes('healthcare') || desc.includes('medical') || desc.includes('hospital')) industryType = 'Healthcare';
+  else if (desc.includes('finance') || desc.includes('banking') || desc.includes('fintech')) industryType = 'Finance';
+  else if (desc.includes('education') || desc.includes('teaching') || desc.includes('university')) industryType = 'Education';
+  else if (desc.includes('marketing') || desc.includes('advertising') || desc.includes('digital marketing')) industryType = 'Marketing';
+  else if (desc.includes('retail') || desc.includes('e-commerce') || desc.includes('sales')) industryType = 'Retail';
+  else if (desc.includes('manufacturing') || desc.includes('automotive')) industryType = 'Manufacturing';
+  else if (desc.includes('consulting') || desc.includes('advisory')) industryType = 'Consulting';
 
   // Extract soft skills mentioned in job description
   const softSkills = [
     'communication', 'leadership', 'teamwork', 'problem-solving', 'analytical',
-    'critical thinking', 'creativity', 'adaptability', 'time management', 'organization'
+    'critical thinking', 'creativity', 'adaptability', 'time management', 'organization',
+    'initiative', 'collaboration', 'innovation', 'strategic thinking', 'detail-oriented'
   ].filter(skill => desc.includes(skill));
 
   // Extract experience requirements
   const yearMatches = desc.match(/(\d+)\+?\s*years?/g);
   const experienceYears = yearMatches ? yearMatches[0] : 'Relevant experience required';
 
+  // Enhanced company information extraction
+  let companyInfo = 'Dynamic organization offering growth opportunities';
+
+  // Look for company culture/values indicators
+  const cultureIndicators = [
+    'innovative', 'leading', 'growing', 'established', 'startup', 'enterprise',
+    'collaborative', 'diverse', 'inclusive', 'customer-focused', 'mission-driven',
+    'fast-paced', 'agile', 'cutting-edge', 'industry leader', 'market leader',
+    'values', 'culture', 'mission', 'vision', 'commitment to'
+  ];
+
+  const foundCultureWords = cultureIndicators.filter(indicator => desc.includes(indicator));
+  if (foundCultureWords.length > 0) {
+    const primaryCulture = foundCultureWords.slice(0, 3).join(', ');
+    companyInfo = `${primaryCulture.charAt(0).toUpperCase() + primaryCulture.slice(1)} organization focused on excellence and growth`;
+  }
+
+  // Look for specific company goals or initiatives
+  if (desc.includes('digital transformation')) {
+    companyInfo = 'Forward-thinking organization driving digital transformation initiatives';
+  } else if (desc.includes('sustainability') || desc.includes('environmental')) {
+    companyInfo = 'Purpose-driven organization committed to sustainability and positive impact';
+  } else if (desc.includes('scale') || desc.includes('scaling')) {
+    companyInfo = 'High-growth organization focused on scaling operations and expanding market presence';
+  } else if (desc.includes('innovation') && desc.includes('customer')) {
+    companyInfo = 'Customer-centric organization driving innovation and delivering exceptional experiences';
+  }
+
   // Extract common responsibilities keywords
   const responsibilityKeywords = [
     'develop', 'design', 'implement', 'maintain', 'collaborate', 'lead', 'manage',
-    'analyze', 'optimize', 'troubleshoot', 'document', 'test', 'deploy'
+    'analyze', 'optimize', 'troubleshoot', 'document', 'test', 'deploy', 'coordinate',
+    'execute', 'deliver', 'support', 'monitor', 'evaluate', 'improve'
   ];
   const responsibilities = responsibilityKeywords.filter(resp => desc.includes(resp))
-    .map(resp => `${resp.charAt(0).toUpperCase() + resp.slice(1)} solutions and systems`);
+    .map(resp => `${resp.charAt(0).toUpperCase() + resp.slice(1)} innovative solutions and drive results`);
 
   return {
     keyRequirements: keyRequirements.slice(0, 8),
@@ -409,7 +542,7 @@ function generateFallbackAnalysis(jobDescription: string, jobTitle: string): Job
       'Analyze requirements and implement solutions'
     ],
     keywords: [...requiredSkills, ...softSkills, jobTitle.toLowerCase().split(' ')].slice(0, 20),
-    companyInfo: 'Dynamic organization offering growth opportunities',
+    companyInfo,
     roleLevel,
     industryType,
     matchingScore: 75,
@@ -571,23 +704,83 @@ ${buildEducationSection()}
 }
 
 function generateTailoredCoverLetter(profile: UserProfile, jobTitle: string, companyName: string, analysis: JobAnalysis): string {
-  const { personalInfo, experience } = profile;
-  const topExperience = experience[0];
+  const { personalInfo, experience, skills } = profile;
 
-  return `Dear ${companyName} Hiring Team,
+  // Sort experience to get most recent/relevant first
+  const sortedExperience = [...experience].sort((a, b) => {
+    if (a.current && !b.current) return -1;
+    if (!a.current && b.current) return 1;
+    const dateA = new Date(a.startDate || '1900-01-01');
+    const dateB = new Date(b.startDate || '1900-01-01');
+    return dateB.getTime() - dateA.getTime();
+  });
 
-I am writing to express my strong interest in the ${jobTitle} position at ${companyName}. With my background in ${topExperience ? (topExperience.jobTitle || topExperience.position || 'professional development') : 'professional development'} and proven expertise in ${analysis.requiredSkills.slice(0, 3).join(', ')}, I am excited about the opportunity to contribute to your team's success.
+  const topExperience = sortedExperience[0];
+  const secondExperience = sortedExperience[1];
 
-In my ${topExperience ? `role as ${topExperience.jobTitle || topExperience.position || 'professional'} at ${topExperience.company}` : 'professional experience'}, I have developed strong capabilities that directly align with your requirements. ${topExperience ? topExperience.description : 'I have consistently delivered high-quality results and contributed to team objectives.'} This experience has prepared me to excel in the ${jobTitle} role, particularly in areas such as ${analysis.keyRequirements.slice(0, 2).join(' and ')}.
+  // Find skills that match job requirements
+  const matchingSkills = skills.filter(skill =>
+    analysis.requiredSkills.some(req =>
+      req.toLowerCase().includes(skill.name.toLowerCase()) ||
+      skill.name.toLowerCase().includes(req.toLowerCase())
+    )
+  );
 
-What particularly excites me about this opportunity at ${companyName} is the chance to apply my skills in ${analysis.requiredSkills.slice(0, 2).join(' and ')} while contributing to your organization's growth and innovation. I am confident that my proven track record of ${topExperience && topExperience.achievements && topExperience.achievements.length > 0
-  ? topExperience.achievements[0].toLowerCase()
-  : 'delivering results and exceeding expectations'} makes me an ideal candidate for this position.
+  // Get relevant achievements
+  const topAchievements = topExperience?.achievements || [];
+  const secondAchievements = secondExperience?.achievements || [];
+  const allAchievements = [...topAchievements, ...secondAchievements];
 
-I would welcome the opportunity to discuss how my experience and enthusiasm can contribute to ${companyName}'s continued success. Thank you for considering my application, and I look forward to hearing from you.
+  // Build professional letter header with personal information
+  const letterHeader = `${personalInfo.firstName} ${personalInfo.lastName}
+${personalInfo.location || 'Available upon request'}
+${personalInfo.email}${personalInfo.phone ? ` | ${personalInfo.phone}` : ''}${personalInfo.linkedin ? `
+LinkedIn: ${personalInfo.linkedin}` : ''}${personalInfo.website ? `
+Portfolio: ${personalInfo.website}` : ''}
+
+${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+
+${companyName} Hiring Team
+Re: ${jobTitle} Position`;
+
+  // Build compelling opening that establishes immediate credibility
+  const opening = `Dear ${companyName} Hiring Team,
+
+I am excited to apply for the ${jobTitle} position at ${companyName}. As a ${analysis.roleLevel}-level professional with ${experience.length > 0 ? `${Math.max(1, experience.length)}+ years` : 'relevant experience'} in ${analysis.industryType.toLowerCase()}, I bring exactly the combination of ${analysis.requiredSkills.slice(0, 2).join(' and ')} expertise that your role demands. ${personalInfo.professionalOverview ? personalInfo.professionalOverview.replace(/\.$/, '') + ', and I' : 'I'} am particularly drawn to ${companyName}'s ${analysis.companyInfo.includes('innovative') || analysis.companyInfo.includes('leading') ? 'innovative approach' : 'commitment to excellence'} in the ${analysis.industryType.toLowerCase()} space.`;
+
+  // Build qualification match paragraph that addresses specific requirements
+  const qualificationMatch = `Your requirements for ${analysis.keyRequirements.slice(0, 3).join(', ').toLowerCase()} align perfectly with my background. ${topExperience ?
+    `In my current role as ${topExperience.jobTitle || topExperience.position} at ${topExperience.company}, I have ${topExperience.description || 'consistently delivered exceptional results'}` :
+    'Throughout my professional experience, I have developed strong capabilities in these areas'}${topAchievements.length > 0 ?
+    `, achieving notable results including ${topAchievements[0].toLowerCase().replace(/^[A-Z]/, char => char.toLowerCase())}` :
+    ', consistently exceeding performance expectations'}. ${matchingSkills.length > 0 ?
+    `My proficiency in ${matchingSkills.slice(0, 3).map(s => s.name).join(', ')} directly supports your technical requirements, while my experience with ${analysis.requiredSkills.slice(0, 2).join(' and ')} ensures I can contribute immediately to your team's objectives.` :
+    `This experience has equipped me with the technical and analytical skills essential for success in your ${jobTitle} role.`}`;
+
+  // Build value proposition that shows company alignment and unique value
+  const valueProposition = `What sets me apart as a candidate is my ability to ${analysis.responsibilities && analysis.responsibilities.length > 0 ? analysis.responsibilities[0].toLowerCase() : 'deliver innovative solutions'} while maintaining focus on ${analysis.industryType.toLowerCase() === 'technology' ? 'scalability and user experience' : 'operational excellence and stakeholder satisfaction'}. ${secondExperience ?
+    `My previous experience at ${secondExperience.company} as ${secondExperience.jobTitle || secondExperience.position} further strengthened my capabilities in ${analysis.preferredSkills.slice(0, 2).join(' and ')}, ` :
+    'My diverse background has prepared me to '}${allAchievements.length > 1 ?
+    `which resulted in ${allAchievements[1].toLowerCase().replace(/^[A-Z]/, char => char.toLowerCase())}. ` :
+    'tackle complex challenges with innovative thinking. '}I am particularly excited about ${companyName}'s focus on ${analysis.companyInfo.includes('growth') ? 'growth and innovation' : analysis.companyInfo.includes('customer') ? 'customer success' : 'excellence and innovation'}, as this aligns with my passion for ${analysis.roleLevel === 'senior' || analysis.roleLevel === 'executive' ? 'driving strategic initiatives and leading high-performing teams' : 'contributing to meaningful projects and continuous learning'}.`;
+
+  // Build confident close
+  const confidentClose = `I am eager to bring my expertise in ${analysis.requiredSkills.slice(0, 2).join(' and ')} to help ${companyName} ${analysis.roleLevel === 'executive' ? 'achieve its strategic objectives' : analysis.roleLevel === 'senior' ? 'continue its growth trajectory' : 'reach new levels of success'}. Thank you for considering my application—I would welcome the opportunity to discuss how my proven track record of ${allAchievements.length > 0 ?
+    allAchievements[0].toLowerCase().replace(/^[A-Z]/, char => char.toLowerCase()) :
+    'delivering exceptional results and driving innovation'} can contribute to your team's continued success.
 
 Sincerely,
 ${personalInfo.firstName} ${personalInfo.lastName}`;
+
+  return `${letterHeader}
+
+${opening}
+
+${qualificationMatch}
+
+${valueProposition}
+
+${confidentClose}`;
 }
 
 function getRoleSummary(jobTitle: string, experience: any[], analysis: JobAnalysis): string {
