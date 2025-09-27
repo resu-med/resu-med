@@ -418,7 +418,7 @@ function generateTailoredResume(profile: UserProfile, jobTitle: string, companyN
   const { personalInfo, experience, education, skills } = profile;
 
   const relevantSkills = skills.filter(skill =>
-    analysis.requiredSkills.some(req =>
+    analysis.requiredSkills && analysis.requiredSkills.some(req =>
       req.toLowerCase().includes(skill.name.toLowerCase()) ||
       skill.name.toLowerCase().includes(req.toLowerCase())
     )
@@ -430,7 +430,7 @@ function generateTailoredResume(profile: UserProfile, jobTitle: string, companyN
 
   // Categorize skills for better presentation
   const preferredSkills = skills.filter(skill =>
-    analysis.preferredSkills?.some(pref =>
+    analysis.preferredSkills && analysis.preferredSkills.some(pref =>
       pref.toLowerCase().includes(skill.name.toLowerCase()) ||
       skill.name.toLowerCase().includes(pref.toLowerCase())
     )
@@ -452,22 +452,78 @@ function generateTailoredResume(profile: UserProfile, jobTitle: string, companyN
 
     // Add 2-3 more detailed achievements for recent roles
     const additionalAchievements = index < 2 ? [
-      `Successfully implemented solutions using ${analysis.requiredSkills.slice(0, 2).join(' and ')} technologies`,
-      `Contributed to ${analysis.keyRequirements[0]?.toLowerCase() || 'project objectives'} with measurable impact on team productivity`,
-      `Demonstrated expertise in ${analysis.responsibilities?.[0]?.toLowerCase() || 'key responsibilities'} while maintaining high quality standards`
+      `Successfully implemented solutions using ${(analysis.requiredSkills && analysis.requiredSkills.length > 0) ? analysis.requiredSkills.slice(0, 2).join(' and ') : 'modern'} technologies`,
+      `Contributed to ${(analysis.keyRequirements && analysis.keyRequirements.length > 0) ? analysis.keyRequirements[0].toLowerCase() : 'project objectives'} with measurable impact on team productivity`,
+      `Demonstrated expertise in ${(analysis.responsibilities && analysis.responsibilities.length > 0) ? analysis.responsibilities[0].toLowerCase() : 'key responsibilities'} while maintaining high quality standards`
     ] : [];
 
     const allAchievements = [...baseAchievements, ...additionalAchievements];
 
-    return `**${exp.position}**
-**${exp.company}** | ${exp.location}
-*${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}*
+    // Format dates properly
+    const startDate = exp.startDate || 'Start Date';
+    const endDate = exp.current ? 'Present' : (exp.endDate || 'End Date');
 
-${exp.description}
+    return `**${exp.position}**
+**${exp.company}** | ${exp.location || 'Location'}
+*${startDate} - ${endDate}*
+
+${exp.description || 'Responsible for key duties and delivering results in this role.'}
 
 Key Achievements:
 ${allAchievements.slice(0, index < 2 ? 6 : 4).map(achievement => `• ${achievement}`).join('\n')}`;
   });
+
+  // Build skills sections with proper fallbacks
+  const buildSkillsSection = () => {
+    const sections = [];
+
+    if (relevantSkills.length > 0) {
+      sections.push(`Primary Skills: ${relevantSkills.slice(0, 8).map(skill => skill.name).join(' • ')}`);
+    }
+
+    if (preferredSkills.length > 0) {
+      sections.push(`Additional Skills: ${preferredSkills.slice(0, 6).map(skill => skill.name).join(' • ')}`);
+    }
+
+    if (otherSkills.length > 0) {
+      sections.push(`Other Proficiencies: ${otherSkills.slice(0, 4).map(skill => skill.name).join(' • ')}`);
+    }
+
+    // If no categorized skills, just list all skills
+    if (sections.length === 0 && skills.length > 0) {
+      sections.push(`Technical Skills: ${skills.slice(0, 12).map(skill => skill.name).join(' • ')}`);
+    }
+
+    return sections.join('\n');
+  };
+
+  // Build education section with proper formatting
+  const buildEducationSection = () => {
+    if (education.length === 0) {
+      return 'Education details available upon request';
+    }
+
+    return education.map(edu => {
+      const degree = edu.degree || 'Degree';
+      const field = edu.field || 'Field of Study';
+      const institution = edu.institution || 'Institution';
+      const location = edu.location || 'Location';
+      const startDate = edu.startDate || 'Start Date';
+      const endDate = edu.current ? 'Present' : (edu.endDate || 'End Date');
+
+      let eduSection = `${degree} in ${field}\n${institution} | ${location} | ${startDate} - ${endDate}`;
+
+      if (edu.gpa) {
+        eduSection += `\nGPA: ${edu.gpa}`;
+      }
+
+      if (edu.achievements && edu.achievements.length > 0) {
+        eduSection += '\n' + edu.achievements.map(a => `• ${a}`).join('\n');
+      }
+
+      return eduSection;
+    }).join('\n\n');
+  };
 
   return `${personalInfo.firstName} ${personalInfo.lastName}
 ${personalInfo.email} | ${personalInfo.phone} | ${personalInfo.location}
@@ -478,9 +534,7 @@ PROFESSIONAL SUMMARY
 ${professionalSummary}
 
 CORE COMPETENCIES
-${relevantSkills.length > 0 ? `Primary Skills: ${relevantSkills.slice(0, 8).map(skill => skill.name).join(' • ')}` : ''}
-${preferredSkills.length > 0 ? `Additional Skills: ${preferredSkills.slice(0, 6).map(skill => skill.name).join(' • ')}` : ''}
-${otherSkills.length > 0 ? `Other Proficiencies: ${otherSkills.slice(0, 4).map(skill => skill.name).join(' • ')}` : ''}
+${buildSkillsSection()}
 
 PROFESSIONAL EXPERIENCE
 
@@ -488,10 +542,7 @@ ${enhancedExperience.join('\n\n')}
 
 EDUCATION
 
-${education.map(edu => `${edu.degree} in ${edu.field}
-${edu.institution} | ${edu.location} | ${edu.startDate} - ${edu.current ? 'Present' : edu.endDate}
-${edu.gpa ? `GPA: ${edu.gpa}` : ''}
-${edu.achievements && edu.achievements.length > 0 ? edu.achievements.map(a => `• ${a}`).join('\n') : ''}`).join('\n\n')}
+${buildEducationSection()}
 `;
 }
 
