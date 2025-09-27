@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import JobSearchForm from '@/components/forms/JobSearchForm';
 import { JobListing, JobSearchFilters } from '@/types/profile';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/AuthContext';
 import RouteGuard from '@/components/RouteGuard';
-import AccountDropdown from '@/components/AccountDropdown';
+import ResponsiveNavigation from '@/components/ResponsiveNavigation';
 
 // Local storage keys
 const STORAGE_KEYS = {
@@ -216,41 +215,8 @@ function JobSearchPageContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Header */}
-      <div className="bg-white border-b-2 border-teal-100 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center">
-              <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-                <div className="bg-gradient-to-br from-teal-500 to-blue-600 p-2 rounded-xl shadow-lg">
-                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-teal-700 to-blue-700 bg-clip-text text-transparent">
-                    ResuMed
-                  </h1>
-                  <p className="text-xs text-teal-600 font-medium">Clinical Resume Care</p>
-                </div>
-              </Link>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex items-center space-x-8">
-              <Link href="/profile" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                Profile Builder
-              </Link>
-              <Link href="/job-search" className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md">
-                Job Search
-              </Link>
-              <Link href="/templates" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                Templates
-              </Link>
-              <AccountDropdown />
-            </nav>
-          </div>
-        </div>
+      <div className="sticky top-0 z-50">
+        <ResponsiveNavigation currentPage="job-search" />
       </div>
 
       {/* Main Content */}

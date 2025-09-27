@@ -2,74 +2,14 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import AccountDropdown from '@/components/AccountDropdown';
+import ResponsiveNavigation from '@/components/ResponsiveNavigation';
 
 export default function Home() {
   const { state: authState, logout } = useAuth();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b-2 border-teal-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-lg shadow-md">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4" />
-                  <circle cx="12" cy="8" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent">
-                  ResuMed
-                </h1>
-                <p className="text-xs text-teal-600 -mt-1">Clinical Resume Care</p>
-              </div>
-            </div>
-
-            {/* Navigation Actions */}
-            <nav className="flex items-center space-x-8">
-              {authState.isAuthenticated && (
-                <>
-                  <Link href="/profile" className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-md">
-                    Profile Builder
-                  </Link>
-                  <Link href="/job-search" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                    Job Search
-                  </Link>
-                  <Link href="/templates" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                    Templates
-                  </Link>
-                </>
-              )}
-              <button className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                About
-              </button>
-
-              {authState.isAuthenticated ? (
-                <AccountDropdown />
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <Link
-                    href="/auth"
-                    className="text-gray-600 hover:text-teal-600 font-medium transition-colors"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/auth?mode=signup"
-                    className="bg-gradient-to-r from-teal-600 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-teal-700 hover:to-blue-700 transition-all shadow-md"
-                  >
-                    Sign Up
-                  </Link>
-                </div>
-              )}
-            </nav>
-          </div>
-        </div>
-      </nav>
+      <ResponsiveNavigation currentPage="home" />
 
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">

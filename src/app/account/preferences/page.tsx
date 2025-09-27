@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import RouteGuard from '@/components/RouteGuard';
-import AccountDropdown from '@/components/AccountDropdown';
+import ResponsiveNavigation from '@/components/ResponsiveNavigation';
 
 function PreferencesPageContent() {
   const { state: authState } = useAuth();
@@ -92,44 +92,8 @@ function PreferencesPageContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Header */}
-      <div className="bg-white border-b-2 border-teal-100 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-lg shadow-md">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4" />
-                  <circle cx="12" cy="8" r="2" stroke="currentColor" strokeWidth="2" fill="none"/>
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent">
-                  ResuMed
-                </h1>
-                <p className="text-xs text-teal-600 -mt-1">Clinical Resume Care</p>
-              </div>
-            </Link>
-
-            {/* Navigation */}
-            <nav className="flex items-center space-x-8">
-              <Link href="/profile" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                Profile Builder
-              </Link>
-              <Link href="/job-search" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                Job Search
-              </Link>
-              <Link href="/templates" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                Templates
-              </Link>
-              <button className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
-                About
-              </button>
-              <AccountDropdown />
-            </nav>
-          </div>
-        </div>
+      <div className="sticky top-0 z-50">
+        <ResponsiveNavigation />
       </div>
 
       {/* Main Content */}
