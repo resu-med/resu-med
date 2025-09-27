@@ -1,34 +1,46 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import {
-  User,
-  SignupData,
-  LoginData,
-  AuthResponse,
-  UserPreferences,
-  SUBSCRIPTION_PLANS,
-  FREE_PLAN
-} from '@/types/subscription';
+
+interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
+  emailVerified: boolean;
+  createdAt: string;
+}
 
 interface AuthState {
-  user: Omit<User, 'passwordHash'> | null;
+  user: AuthUser | null;
+  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;
 }
 
+interface LoginData {
+  email: string;
+  password: string;
+}
+
+interface SignupData {
+  name: string;
+  email: string;
+  password: string;
+}
+
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'LOGIN_SUCCESS'; payload: Omit<User, 'passwordHash'> }
-  | { type: 'SIGNUP_SUCCESS'; payload: Omit<User, 'passwordHash'> }
+  | { type: 'LOGIN_SUCCESS'; payload: { user: AuthUser; token: string } }
+  | { type: 'SIGNUP_SUCCESS'; payload: { user: AuthUser; token: string } }
   | { type: 'LOGOUT' }
   | { type: 'SET_ERROR'; payload: string }
   | { type: 'CLEAR_ERROR' }
-  | { type: 'UPDATE_USER'; payload: Partial<Omit<User, 'passwordHash'>> };
+  | { type: 'UPDATE_USER'; payload: Partial<AuthUser> };
 
 const initialState: AuthState = {
   user: null,
+  token: null,
   isLoading: false,
   isAuthenticated: false,
   error: null
@@ -43,7 +55,8 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case 'SIGNUP_SUCCESS':
       return {
         ...state,
-        user: action.payload,
+        user: action.payload.user,
+        token: action.payload.token,
         isAuthenticated: true,
         isLoading: false,
         error: null
@@ -84,120 +97,120 @@ interface AuthContextType {
   signup: (signupData: SignupData) => Promise<void>;
   logout: () => void;
   clearError: () => void;
-  isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo user creation function
-const createDemoUser = (signupData: SignupData): Omit<User, 'passwordHash'> => {
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const userId = 'user-' + Date.now();
-  const selectedPlan = SUBSCRIPTION_PLANS.find(p => p.id === signupData.selectedPlan) || FREE_PLAN;
-
-  const defaultPreferences: UserPreferences = {
-    defaultLocation: 'United Kingdom',
-    preferredJobTypes: [],
-    defaultProviders: ['Reed', 'Adzuna', 'JSearch'],
-    emailNotifications: true,
-    marketingEmails: false,
-    ...signupData.preferences
-  };
-
-  return {
-    id: userId,
-    email: signupData.email,
-    name: signupData.name,
-    role: signupData.email === 'admin@resumed.com' ? 'admin' : 'user',
-    emailVerified: false,
-    subscription: {
-      id: 'sub-' + userId,
-      userId,
-      planId: selectedPlan.id,
-      tier: selectedPlan.tier,
-      status: 'active',
-      currentPeriodStart: new Date().toISOString(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      cancelAtPeriodEnd: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    usage: {
-      userId,
-      month: currentMonth,
-      jobSearches: 0,
-      aiOptimizations: 0,
-      coverLettersGenerated: 0,
-      profileExports: 0,
-      lastResetDate: new Date().toISOString()
-    },
-    preferences: defaultPreferences,
-    createdAt: new Date().toISOString()
-  };
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Load user from localStorage on mount
+  // Load auth state from localStorage on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('resumed_auth_user');
-    if (savedUser) {
+    const savedToken = localStorage.getItem('resumed_auth_token');
+
+    if (savedUser && savedToken) {
       try {
         const user = JSON.parse(savedUser);
-        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+        dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token: savedToken } });
       } catch (error) {
-        console.error('Error loading saved user:', error);
+        console.error('Error loading saved auth:', error);
         localStorage.removeItem('resumed_auth_user');
+        localStorage.removeItem('resumed_auth_token');
       }
     }
   }, []);
 
-  // Save user to localStorage whenever auth state changes
+  // Save auth state to localStorage whenever it changes
   useEffect(() => {
-    if (state.user) {
+    if (state.user && state.token) {
       localStorage.setItem('resumed_auth_user', JSON.stringify(state.user));
+      localStorage.setItem('resumed_auth_token', state.token);
     } else {
       localStorage.removeItem('resumed_auth_user');
+      localStorage.removeItem('resumed_auth_token');
     }
-  }, [state.user]);
+  }, [state.user, state.token]);
 
   const login = async (loginData: LoginData) => {
     dispatch({ type: 'SET_LOADING', payload: true });
+
     try {
-      // In a real app, this would make an API call
-      // For demo, check against admin credentials or create demo user
-      if (loginData.email === 'admin@resumed.com' && loginData.password === 'admin123') {
-        const adminUser = createDemoUser({
-          name: 'Admin User',
-          email: 'admin@resumed.com',
-          password: 'admin123',
-          selectedPlan: 'professional'
-        });
-        dispatch({ type: 'LOGIN_SUCCESS', payload: adminUser });
-      } else {
-        // Create demo user for any other credentials
-        const demoUser = createDemoUser({
-          name: loginData.email.split('@')[0],
-          email: loginData.email,
-          password: loginData.password,
-          selectedPlan: 'free'
-        });
-        dispatch({ type: 'LOGIN_SUCCESS', payload: demoUser });
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
       }
+
+      dispatch({
+        type: 'LOGIN_SUCCESS',
+        payload: { user: data.user, token: data.token }
+      });
+
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: 'Login failed' });
+      const message = error instanceof Error ? error.message : 'Login failed';
+      dispatch({ type: 'SET_ERROR', payload: message });
     }
   };
 
   const signup = async (signupData: SignupData) => {
     dispatch({ type: 'SET_LOADING', payload: true });
+
     try {
-      // In a real app, this would make an API call
-      const newUser = createDemoUser(signupData);
-      dispatch({ type: 'SIGNUP_SUCCESS', payload: newUser });
+      // First register the user
+      const registerResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(signupData),
+      });
+
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        if (registerData.details) {
+          // Password validation errors
+          throw new Error(registerData.details.join('. '));
+        }
+        throw new Error(registerData.error || 'Registration failed');
+      }
+
+      // Then automatically log them in
+      const loginResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: signupData.email,
+          password: signupData.password
+        }),
+      });
+
+      const loginData = await loginResponse.json();
+
+      if (!loginResponse.ok) {
+        throw new Error('Registration successful, but auto-login failed. Please log in manually.');
+      }
+
+      dispatch({
+        type: 'SIGNUP_SUCCESS',
+        payload: { user: loginData.user, token: loginData.token }
+      });
+
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: 'Signup failed' });
+      const message = error instanceof Error ? error.message : 'Registration failed';
+      dispatch({ type: 'SET_ERROR', payload: message });
     }
   };
 
@@ -209,17 +222,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'CLEAR_ERROR' });
   };
 
-  const isAdmin = () => {
-    return state.user?.role === 'admin';
-  };
 
   const value: AuthContextType = {
     state,
     login,
     signup,
     logout,
-    clearError,
-    isAdmin
+    clearError
   };
 
   return (

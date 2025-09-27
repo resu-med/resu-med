@@ -21,7 +21,15 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
-        name VARCHAR(255),
+        name VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        email_verified BOOLEAN DEFAULT FALSE,
+        verification_token VARCHAR(255),
+        reset_token VARCHAR(255),
+        reset_token_expires TIMESTAMP,
+        last_login_at TIMESTAMP,
+        failed_login_attempts INTEGER DEFAULT 0,
+        locked_until TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )

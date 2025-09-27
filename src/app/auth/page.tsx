@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { SignupData, LoginData, SUBSCRIPTION_PLANS } from '@/types/subscription';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -23,21 +22,13 @@ function AuthPageContent() {
   const router = useRouter();
   const [isSignup, setIsSignup] = useState(false);
 
-  const [signupForm, setSignupForm] = useState<SignupData>({
+  const [signupForm, setSignupForm] = useState({
     name: '',
     email: '',
-    password: '',
-    selectedPlan: 'free',
-    preferences: {
-      defaultLocation: 'United Kingdom',
-      preferredJobTypes: [],
-      defaultProviders: ['Reed', 'Adzuna', 'JSearch'],
-      emailNotifications: true,
-      marketingEmails: false
-    }
+    password: ''
   });
 
-  const [loginForm, setLoginForm] = useState<LoginData>({
+  const [loginForm, setLoginForm] = useState({
     email: '',
     password: ''
   });
@@ -161,49 +152,15 @@ function AuthPageContent() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-gray-900"
                     placeholder="Choose a secure password"
                   />
-                </div>
-
-                {/* Subscription Plan Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Choose Your Plan
-                  </label>
-                  <div className="space-y-3">
-                    {SUBSCRIPTION_PLANS.map((plan) => (
-                      <label
-                        key={plan.id}
-                        className={`flex items-start p-3 border rounded-lg cursor-pointer transition-all ${
-                          signupForm.selectedPlan === plan.id
-                            ? 'border-teal-500 bg-teal-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="plan"
-                          value={plan.id}
-                          checked={signupForm.selectedPlan === plan.id}
-                          onChange={(e) => setSignupForm(prev => ({ ...prev, selectedPlan: e.target.value }))}
-                          className="mt-1 h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium text-gray-900">{plan.name}</span>
-                            {plan.popular && (
-                              <span className="px-2 py-1 bg-teal-100 text-teal-700 text-xs font-medium rounded-full">
-                                Popular
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {plan.price === 0 ? 'Free' : `£${plan.price}/month`}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {plan.features.slice(0, 2).join(' • ')}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
+                  <div className="mt-2 text-xs text-gray-600">
+                    <p>Password must contain:</p>
+                    <ul className="list-disc list-inside mt-1 space-y-1">
+                      <li>At least 8 characters</li>
+                      <li>One uppercase letter</li>
+                      <li>One lowercase letter</li>
+                      <li>One number</li>
+                      <li>One special character</li>
+                    </ul>
                   </div>
                 </div>
 

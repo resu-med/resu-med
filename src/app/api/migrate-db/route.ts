@@ -25,6 +25,25 @@ export async function POST() {
       console.log('⚠️ Interests columns may already exist:', error);
     }
 
+    // Add security columns to users table if they don't exist
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255)`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP`;
+
+      // Make name required if it isn't already
+      await sql`ALTER TABLE users ALTER COLUMN name SET NOT NULL`;
+
+      console.log('✅ User security columns added');
+    } catch (error) {
+      console.log('⚠️ User security columns may already exist or have constraints:', error);
+    }
+
     // Update existing skill categories to lowercase
     await sql`UPDATE skills SET category = LOWER(category) WHERE category != LOWER(category)`;
     console.log('✅ Skill categories updated to lowercase');
