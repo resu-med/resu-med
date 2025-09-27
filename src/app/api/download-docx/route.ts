@@ -136,22 +136,64 @@ async function parseResumeWithAI(content: string): Promise<any> {
       });
 
       const prompt = `
-        Parse this resume content and extract the structured information. Return a JSON object with the following structure:
+        Parse this resume content and extract the structured information for professional formatting. Return a JSON object with these EXACT sections:
 
         {
           "sections": [
             {
-              "type": "header", // "header", "experience", "education", "skills", "other"
+              "type": "summary",
+              "title": "PROFESSIONAL SUMMARY",
+              "content": [
+                {
+                  "type": "text",
+                  "content": "Professional summary paragraph text"
+                }
+              ]
+            },
+            {
+              "type": "skills",
+              "title": "CORE COMPETENCIES",
+              "content": [
+                {
+                  "type": "skill-group",
+                  "category": "Primary Skills",
+                  "skills": ["Skill 1", "Skill 2", "Skill 3"]
+                },
+                {
+                  "type": "skill-group",
+                  "category": "Additional Skills",
+                  "skills": ["Skill 4", "Skill 5"]
+                }
+              ]
+            },
+            {
+              "type": "experience",
               "title": "PROFESSIONAL EXPERIENCE",
               "content": [
                 {
-                  "type": "job", // "job", "education", "skill-group", "text"
+                  "type": "job",
                   "jobTitle": "Senior Software Engineer",
                   "company": "Google Inc.",
                   "location": "Mountain View, CA",
                   "dates": "January 2020 - Present",
                   "description": "Job description text",
                   "achievements": ["Achievement 1", "Achievement 2"]
+                }
+              ]
+            },
+            {
+              "type": "education",
+              "title": "EDUCATION",
+              "content": [
+                {
+                  "type": "education",
+                  "degree": "Bachelor of Science",
+                  "field": "Computer Science",
+                  "institution": "University Name",
+                  "location": "City, State",
+                  "dates": "2016 - 2020",
+                  "gpa": "3.8",
+                  "achievements": ["Achievement 1"]
                 }
               ]
             }
@@ -161,17 +203,21 @@ async function parseResumeWithAI(content: string): Promise<any> {
         Resume content:
         ${content}
 
-        Extract ALL job titles, company names, dates, and achievements. Be very careful to preserve exact company names and employment dates.
+        IMPORTANT:
+        - Extract ALL job titles, company names, dates, and achievements exactly as written
+        - Group skills into Primary Skills and Additional Skills categories
+        - Ensure proper section organization for professional formatting
+        - Preserve exact employment dates and company names
       `;
 
       const response = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
-          { role: 'system', content: 'You are an expert resume parser. Return only valid JSON.' },
+          { role: 'system', content: 'You are an expert resume parser specializing in professional document structure. Return only valid JSON.' },
           { role: 'user', content: prompt }
         ],
         temperature: 0.1,
-        max_tokens: 2000
+        max_tokens: 2500
       });
 
       const parsed = JSON.parse(response.choices[0].message.content || '{}');
@@ -194,7 +240,7 @@ function createDocumentSections(parsedData: any): Paragraph[] {
   }
 
   for (const section of parsedData.sections) {
-    // Add section header
+    // Create professional section headers with consistent styling
     if (section.title) {
       paragraphs.push(
         new Paragraph({
@@ -203,128 +249,317 @@ function createDocumentSections(parsedData: any): Paragraph[] {
               text: section.title,
               bold: true,
               size: 28,
-              color: "1F4E79"
+              color: "1F4E79",
+              allCaps: true
             })
           ],
-          spacing: { before: 400, after: 200 },
+          spacing: { before: 600, after: 300 },
           border: {
             bottom: {
               color: "1F4E79",
-              space: 1,
+              space: 5,
               style: BorderStyle.SINGLE,
-              size: 6
+              size: 10
             }
           }
         })
       );
     }
 
-    // Add section content
+    // Handle different section types with appropriate formatting
     if (section.content) {
-      for (const item of section.content) {
-        if (item.type === 'job') {
-          // Add job title
-          if (item.jobTitle) {
+      if (section.type === 'summary') {
+        // Professional Summary formatting
+        for (const item of section.content) {
+          if (item.type === 'text') {
             paragraphs.push(
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: item.jobTitle,
-                    bold: true,
-                    size: 26,
-                    color: "1F4E79"
+                    text: item.content,
+                    size: 24
                   })
                 ],
-                spacing: { before: 300, after: 100 }
-              })
-            );
-          }
-
-          // Add company and location
-          if (item.company || item.location) {
-            const companyInfo = [item.company, item.location].filter(Boolean).join(' | ');
-            paragraphs.push(
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: companyInfo,
-                    bold: true,
-                    size: 22,
-                    color: "2D4A6B"
-                  })
-                ],
-                spacing: { after: 100 }
-              })
-            );
-          }
-
-          // Add dates
-          if (item.dates) {
-            paragraphs.push(
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: item.dates,
-                    italic: true,
-                    size: 20,
-                    color: "666666"
-                  })
-                ],
-                spacing: { after: 200 }
-              })
-            );
-          }
-
-          // Add description
-          if (item.description) {
-            paragraphs.push(
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: item.description,
-                    size: 22
-                  })
-                ],
-                spacing: { after: 150 },
+                spacing: { after: 300 },
                 alignment: AlignmentType.JUSTIFIED
               })
             );
           }
-
-          // Add achievements
-          if (item.achievements && item.achievements.length > 0) {
-            for (const achievement of item.achievements) {
+        }
+      } else if (section.type === 'skills') {
+        // Core Competencies formatting
+        for (const item of section.content) {
+          if (item.type === 'skill-group') {
+            // Skill category header
+            if (item.category) {
               paragraphs.push(
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: achievement.startsWith('•') ? achievement : `• ${achievement}`,
+                      text: item.category + ':',
+                      bold: true,
+                      size: 22,
+                      color: "2D4A6B"
+                    })
+                  ],
+                  spacing: { before: 200, after: 100 }
+                })
+              );
+            }
+
+            // Skills list
+            if (item.skills && item.skills.length > 0) {
+              const skillsText = item.skills.join(' • ');
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: skillsText,
                       size: 22
                     })
                   ],
-                  spacing: { after: 120 },
+                  spacing: { after: 150 },
                   indent: { left: 360 }
                 })
               );
             }
           }
-        } else if (item.type === 'text') {
-          paragraphs.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: item.content || item.text || '',
-                  size: 22
+        }
+      } else if (section.type === 'experience') {
+        // Professional Experience formatting
+        for (const item of section.content) {
+          if (item.type === 'job') {
+            // Job title (prominent)
+            if (item.jobTitle) {
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: item.jobTitle,
+                      bold: true,
+                      size: 26,
+                      color: "1F4E79"
+                    })
+                  ],
+                  spacing: { before: 400, after: 100 }
                 })
-              ],
-              spacing: { after: 150 },
-              alignment: AlignmentType.JUSTIFIED
-            })
-          );
+              );
+            }
+
+            // Company and location
+            if (item.company || item.location) {
+              const companyInfo = [item.company, item.location].filter(Boolean).join(' | ');
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: companyInfo,
+                      bold: true,
+                      size: 22,
+                      color: "2D4A6B"
+                    })
+                  ],
+                  spacing: { after: 100 }
+                })
+              );
+            }
+
+            // Employment dates
+            if (item.dates) {
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: item.dates,
+                      italic: true,
+                      size: 20,
+                      color: "666666"
+                    })
+                  ],
+                  spacing: { after: 200 }
+                })
+              );
+            }
+
+            // Job description
+            if (item.description) {
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: item.description,
+                      size: 22
+                    })
+                  ],
+                  spacing: { after: 150 },
+                  alignment: AlignmentType.JUSTIFIED
+                })
+              );
+            }
+
+            // Key Achievements header and bullets
+            if (item.achievements && item.achievements.length > 0) {
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: 'Key Achievements:',
+                      bold: true,
+                      size: 22,
+                      color: "2D4A6B"
+                    })
+                  ],
+                  spacing: { before: 200, after: 100 }
+                })
+              );
+
+              for (const achievement of item.achievements) {
+                paragraphs.push(
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: achievement.startsWith('•') ? achievement : `• ${achievement}`,
+                        size: 22
+                      })
+                    ],
+                    spacing: { after: 120 },
+                    indent: { left: 360 }
+                  })
+                );
+              }
+            }
+          }
+        }
+      } else if (section.type === 'education') {
+        // Education formatting
+        for (const item of section.content) {
+          if (item.type === 'education') {
+            // Degree and field
+            if (item.degree && item.field) {
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `${item.degree} in ${item.field}`,
+                      bold: true,
+                      size: 24,
+                      color: "1F4E79"
+                    })
+                  ],
+                  spacing: { before: 300, after: 100 }
+                })
+              );
+            }
+
+            // Institution and location
+            if (item.institution || item.location) {
+              const institutionInfo = [item.institution, item.location].filter(Boolean).join(' | ');
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: institutionInfo,
+                      bold: true,
+                      size: 22,
+                      color: "2D4A6B"
+                    })
+                  ],
+                  spacing: { after: 100 }
+                })
+              );
+            }
+
+            // Education dates
+            if (item.dates) {
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: item.dates,
+                      italic: true,
+                      size: 20,
+                      color: "666666"
+                    })
+                  ],
+                  spacing: { after: 100 }
+                })
+              );
+            }
+
+            // GPA if available
+            if (item.gpa) {
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `GPA: ${item.gpa}`,
+                      size: 22
+                    })
+                  ],
+                  spacing: { after: 200 }
+                })
+              );
+            }
+
+            // Education achievements
+            if (item.achievements && item.achievements.length > 0) {
+              for (const achievement of item.achievements) {
+                paragraphs.push(
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: achievement.startsWith('•') ? achievement : `• ${achievement}`,
+                        size: 22
+                      })
+                    ],
+                    spacing: { after: 120 },
+                    indent: { left: 360 }
+                  })
+                );
+              }
+            }
+          }
         }
       }
     }
   }
+
+  // Add References section at the end
+  paragraphs.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: 'REFERENCES',
+          bold: true,
+          size: 28,
+          color: "1F4E79",
+          allCaps: true
+        })
+      ],
+      spacing: { before: 600, after: 300 },
+      border: {
+        bottom: {
+          color: "1F4E79",
+          space: 5,
+          style: BorderStyle.SINGLE,
+          size: 10
+        }
+      }
+    })
+  );
+
+  paragraphs.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: 'Available upon request',
+          size: 24
+        })
+      ],
+      spacing: { after: 300 },
+      alignment: AlignmentType.CENTER
+    })
+  );
 
   return paragraphs;
 }
