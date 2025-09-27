@@ -298,11 +298,13 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     - Create a strong hook that makes them want to keep reading
 
     PARAGRAPH 2 - DIRECT QUALIFICATION MATCH:
-    - Systematically address the top 3-4 key requirements from the job posting
-    - For each requirement, provide a specific example of how you meet or exceed it
-    - Use concrete metrics, achievements, or outcomes from your experience
-    - Include relevant keywords from the job description naturally
+    - Address the top 3-4 key requirements from the job posting with clear, readable flow
+    - Use varied sentence structure and smooth transitions between points
+    - Provide specific examples with concrete metrics and achievements
+    - Break up dense content into digestible, well-connected sentences
+    - Include relevant keywords naturally without stuffing
     - Show progression and growth in your career
+    - Ensure professional readability similar to Grammarly-polished content
 
     PARAGRAPH 3 - VALUE PROPOSITION & COMPANY ALIGNMENT:
     - Demonstrate understanding of the company's goals, values, or challenges
@@ -325,6 +327,10 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     - Demonstrate genuine research and interest in the company
     - Use active voice and strong action verbs
     - Avoid clichés and generic phrases
+    - Write with excellent flow and readability (Grammarly-level polish)
+    - Use varied sentence lengths and smooth transitions
+    - Ensure each paragraph flows naturally to the next
+    - Break up complex ideas into clear, digestible sentences
 
     CRITICAL REQUIREMENTS:
     - Address specific job requirements with concrete examples
@@ -748,13 +754,15 @@ Re: ${jobTitle} Position`;
 
 I am excited to apply for the ${jobTitle} position at ${companyName}. As a ${analysis.roleLevel}-level professional with ${experience.length > 0 ? `${Math.max(1, experience.length)}+ years` : 'relevant experience'} in ${analysis.industryType.toLowerCase()}, I bring exactly the combination of ${analysis.requiredSkills.slice(0, 2).join(' and ')} expertise that your role demands. ${personalInfo.professionalOverview ? personalInfo.professionalOverview.replace(/\.$/, '') + ', and I' : 'I'} am particularly drawn to ${companyName}'s ${analysis.companyInfo.includes('innovative') || analysis.companyInfo.includes('leading') ? 'innovative approach' : 'commitment to excellence'} in the ${analysis.industryType.toLowerCase()} space.`;
 
-  // Build qualification match paragraph that addresses specific requirements
+  // Build qualification match paragraph with better readability and flow
   const qualificationMatch = `Your requirements for ${analysis.keyRequirements.slice(0, 3).join(', ').toLowerCase()} align perfectly with my background. ${topExperience ?
     `In my current role as ${topExperience.jobTitle || topExperience.position} at ${topExperience.company}, I have ${topExperience.description || 'consistently delivered exceptional results'}` :
     'Throughout my professional experience, I have developed strong capabilities in these areas'}${topAchievements.length > 0 ?
-    `, achieving notable results including ${topAchievements[0].toLowerCase().replace(/^[A-Z]/, char => char.toLowerCase())}` :
-    ', consistently exceeding performance expectations'}. ${matchingSkills.length > 0 ?
-    `My proficiency in ${matchingSkills.slice(0, 3).map(s => s.name).join(', ')} directly supports your technical requirements, while my experience with ${analysis.requiredSkills.slice(0, 2).join(' and ')} ensures I can contribute immediately to your team's objectives.` :
+    `. This includes achieving notable results such as ${topAchievements[0].toLowerCase().replace(/^[A-Z]/, char => char.toLowerCase())}` :
+    ', consistently exceeding performance expectations'}.
+
+${matchingSkills.length > 0 ?
+    `My proficiency in ${matchingSkills.slice(0, 3).map(s => s.name).join(', ')} directly supports your technical requirements. Additionally, my experience with ${analysis.requiredSkills.slice(0, 2).join(' and ')} ensures I can contribute immediately to your team's objectives.` :
     `This experience has equipped me with the technical and analytical skills essential for success in your ${jobTitle} role.`}`;
 
   // Build value proposition that shows company alignment and unique value
