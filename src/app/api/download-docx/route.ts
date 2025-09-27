@@ -737,7 +737,7 @@ function parseExperienceSection(lines: string[]): any[] {
       currentAchievements = [];
       expectingCompanyNext = true;
     }
-    // Company and location (contains | and doesn't look like a job title)
+    // Company and location/dates (contains | and doesn't look like a job title)
     else if (line.includes('|') && currentJob &&
              !line.toLowerCase().includes('manager') &&
              !line.toLowerCase().includes('director') &&
@@ -745,9 +745,20 @@ function parseExperienceSection(lines: string[]): any[] {
              !line.toLowerCase().includes('senior')) {
       const parts = line.split('|').map(p => p.trim());
       currentJob.company = parts[0];
-      if (parts[1]) currentJob.location = parts[1];
+
+      if (parts[1]) {
+        // Check if second part contains dates (years, months, or Present)
+        if (/\d{4}/.test(parts[1]) || parts[1].includes('Present') || /\d{4}-\d{2}/.test(parts[1])) {
+          currentJob.dates = parts[1];
+          console.log(`📅 Set dates from company line: ${currentJob.dates}`);
+        } else {
+          currentJob.location = parts[1];
+          console.log(`📍 Set location: ${currentJob.location}`);
+        }
+      }
+
       expectingCompanyNext = false;
-      console.log(`🏢 Set company: ${currentJob.company}, location: ${currentJob.location}`);
+      console.log(`🏢 Set company: ${currentJob.company}`);
     }
     // Dates (contains years, months, or Present)
     else if ((/\d{4}/.test(line) || line.includes('Present') || /\d{4}-\d{2}/.test(line)) && currentJob) {
