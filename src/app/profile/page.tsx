@@ -12,6 +12,7 @@ import EducationForm from '@/components/forms/EducationForm';
 import SkillsForm from '@/components/forms/SkillsForm';
 import InterestsForm from '@/components/forms/InterestsForm';
 import ResumeUpload from '@/components/forms/ResumeUpload';
+import { calculateProfileCompleteness } from '@/lib/profileCompleteness';
 type ProfileSection = 'upload' | 'personal' | 'experience' | 'education' | 'skills' | 'interests';
 
 type SectionConfig = {
@@ -25,6 +26,9 @@ function ProfilePageContent() {
   const [activeSection, setActiveSection] = useState<ProfileSection>('upload');
   const { state, dispatch } = useProfile();
   const { state: authState, logout } = useAuth();
+
+  // Calculate profile completeness
+  const completeness = calculateProfileCompleteness(state.profile);
 
 
   // Function to check completion status of each section
@@ -60,6 +64,10 @@ function ProfilePageContent() {
     { id: 'skills', label: 'Competencies', icon: '⚡', description: 'Technical and professional skills' },
     { id: 'interests', label: 'Interests', icon: '🌟', description: 'Personal interests and activities' },
   ] as const;
+
+  const handleNavigateToSection = (sectionId: string) => {
+    setActiveSection(sectionId as ProfileSection);
+  };
 
   const renderSection = () => {
     switch (activeSection) {
@@ -108,6 +116,78 @@ function ProfilePageContent() {
           <p className="text-gray-600 text-lg max-w-3xl">
             Build a comprehensive professional profile with clinical precision. Each section contributes to your complete career diagnosis and treatment plan.
           </p>
+        </div>
+
+        {/* Dynamic Progress Banner */}
+        <div className={`p-4 rounded-lg border ${
+          completeness.overall.percentage >= 85 ? 'bg-green-50 border-green-200' :
+          completeness.overall.percentage >= 75 ? 'bg-blue-50 border-blue-200' :
+          completeness.overall.percentage >= 50 ? 'bg-yellow-50 border-yellow-200' :
+          'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="text-2xl">
+                {completeness.overall.percentage >= 85 ? '🏆' :
+                 completeness.overall.percentage >= 75 ? '✅' :
+                 completeness.overall.percentage >= 50 ? '⚠️' : '❌'}
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  Profile Strength: {completeness.overall.percentage}%
+                </h3>
+                <p className={`text-sm ${
+                  completeness.overall.percentage >= 85 ? 'text-green-700' :
+                  completeness.overall.percentage >= 75 ? 'text-blue-700' :
+                  completeness.overall.percentage >= 50 ? 'text-yellow-700' :
+                  'text-red-700'
+                }`}>
+                  {completeness.overall.percentage >= 85 ? 'Outstanding! Ready for premium features.' :
+                   completeness.overall.percentage >= 75 ? 'Great! Ready for job searching.' :
+                   completeness.overall.percentage >= 50 ? 'Good progress! Complete a few more sections.' :
+                   'Profile needs attention to unlock features.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              {completeness.readyForJobs ? (
+                <Link
+                  href="/job-search"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  🔍 Search Jobs
+                </Link>
+              ) : null}
+              {completeness.readyForTemplates ? (
+                <Link
+                  href="/templates"
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                >
+                  📄 Generate Resume
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all duration-500 ${
+                completeness.overall.percentage >= 85 ? 'bg-green-500' :
+                completeness.overall.percentage >= 75 ? 'bg-blue-500' :
+                completeness.overall.percentage >= 50 ? 'bg-yellow-500' :
+                'bg-red-500'
+              }`}
+              style={{ width: `${completeness.overall.percentage}%` }}
+            ></div>
+          </div>
+
+          {/* Next Steps */}
+          {completeness.nextSteps.length > 0 && completeness.overall.percentage < 85 && (
+            <div className="mt-3 text-sm">
+              <strong>Next steps:</strong> {completeness.nextSteps.slice(0, 2).join(', ')}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">

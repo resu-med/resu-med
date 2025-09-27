@@ -5,14 +5,17 @@ import { useDropzone } from 'react-dropzone';
 import { useProfile } from '@/contexts/ProfileContext';
 import { FileParser } from '@/lib/fileParser';
 import { SmartResumeParser } from '@/lib/smartResumeParser';
+import ProfileHealthCheck from '@/components/ProfileHealthCheck';
 
 export default function ResumeUpload() {
-  const { dispatch } = useProfile();
+  const { state: profileState, dispatch } = useProfile();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{
     type: 'success' | 'error' | 'info' | null;
     message: string;
   }>({ type: null, message: '' });
+  const [showHealthCheck, setShowHealthCheck] = useState(false);
+  const [parsedData, setParsedData] = useState<any>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -188,10 +191,18 @@ export default function ResumeUpload() {
       if (parsedData.interests?.length) sections.push(`${parsedData.interests.length} interests`);
 
       const message = sections.length > 0
-        ? `Successfully imported: ${sections.join(', ')}. Please review and edit as needed.`
+        ? `Successfully imported: ${sections.join(', ')}. Checking profile completeness...`
         : 'Resume uploaded but no structured data was found. You may need to manually enter your information.';
 
       setUploadStatus({ type: 'success', message });
+
+      // Store parsed data and show health check after successful import
+      if (sections.length > 0) {
+        setParsedData(parsedData);
+        setTimeout(() => {
+          setShowHealthCheck(true);
+        }, 1000); // Small delay to let user see success message
+      }
     } catch (error) {
       console.error('Error parsing resume:', error);
       setUploadStatus({
@@ -217,6 +228,16 @@ export default function ResumeUpload() {
 
   const clearStatus = () => {
     setUploadStatus({ type: null, message: '' });
+  };
+
+  const handleHealthCheckClose = () => {
+    setShowHealthCheck(false);
+  };
+
+  const handleNavigateToSection = (sectionId: string) => {
+    // This will be handled by the parent component (ProfilePage)
+    // For now, just close the modal
+    setShowHealthCheck(false);
   };
 
   return (
@@ -302,6 +323,13 @@ export default function ResumeUpload() {
         </ul>
       </div>
 
+      {/* Profile Health Check Modal */}
+      <ProfileHealthCheck
+        profile={profileState.profile}
+        isOpen={showHealthCheck}
+        onClose={handleHealthCheckClose}
+        onNavigateToSection={handleNavigateToSection}
+      />
     </div>
   );
 }
