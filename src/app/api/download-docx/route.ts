@@ -986,6 +986,16 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
 function formatDateRange(dateStr: string): string {
   if (!dateStr) return dateStr;
 
+  // Handle yyyy-mm - yyyy-mm format (e.g., "2021-08 - 2024-01")
+  const yearMonthRangeMatch = dateStr.match(/^(\d{4})-(\d{1,2})\s*[-–—]\s*(\d{4})-(\d{1,2})$/);
+  if (yearMonthRangeMatch) {
+    const startYear = yearMonthRangeMatch[1];
+    const startMonth = yearMonthRangeMatch[2].padStart(2, '0');
+    const endYear = yearMonthRangeMatch[3];
+    const endMonth = yearMonthRangeMatch[4].padStart(2, '0');
+    return `${startMonth}/${startYear} - ${endMonth}/${endYear}`;
+  }
+
   // Handle yyyy - mm format (year - month)
   const yearMonthMatch = dateStr.match(/^(\d{4})\s*[-–—]\s*(\d{1,2})$/);
   if (yearMonthMatch) {
