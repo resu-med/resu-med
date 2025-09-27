@@ -211,70 +211,91 @@ function addSectionsToPDF(doc: jsPDF, sections: any, startY: number, maxWidth: n
   return currentY;
 }
 
-function addExperienceSection(doc: jsPDF, experienceText: string, startY: number, maxWidth: number, margin: number, pageHeight: number): number {
+function addExperienceSection(doc: jsPDF, experienceData: any[], startY: number, maxWidth: number, margin: number, pageHeight: number): number {
   let currentY = startY;
-  const lines = experienceText.split('\n').filter(line => line.trim());
 
-  let currentJob: any = null;
+  for (let i = 0; i < experienceData.length; i++) {
+    const job = experienceData[i];
 
-  for (const line of lines) {
-    if (currentY > pageHeight - 30) {
+    if (currentY > pageHeight - 60) {
       doc.addPage();
       currentY = margin;
     }
 
-    // Detect job titles (lines that don't start with bullets and contain job-related keywords)
-    const isJobTitle = !line.startsWith('•') && !line.startsWith('-') &&
-                      (line.includes('Engineer') || line.includes('Manager') || line.includes('Director') ||
-                       line.includes('Lead') || line.includes('Senior') || line.includes('Analyst') ||
-                       line.includes('Coordinator') || line.includes('Specialist'));
-
-    if (isJobTitle) {
-      if (currentJob) currentY += 5; // Space between jobs
-
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(31, 78, 121);
-      doc.text(line, margin, currentY);
-      currentY += 6;
-      currentJob = { title: line };
+    // Add spacing between jobs (except for first one)
+    if (i > 0) {
+      currentY += 8;
     }
-    // Company/location/date lines (contain | or dates)
-    else if (line.includes('|') || /\d{4}/.test(line)) {
+
+    // Job Title
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(31, 78, 121);
+    doc.text(job.title || 'Position', margin, currentY);
+    currentY += 8;
+
+    // Company and Location
+    if (job.company || job.location) {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(45, 74, 107);
-      doc.text(line, margin, currentY);
-      currentY += 5;
+      const companyLine = `${job.company || 'Company'}${job.location ? ` | ${job.location}` : ''}`;
+      doc.text(companyLine, margin, currentY);
+      currentY += 6;
     }
-    // Achievement bullets
-    else if (line.startsWith('•') || line.startsWith('-')) {
+
+    // Dates
+    if (job.dates) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 100, 100);
+      doc.text(job.dates, margin, currentY);
+      currentY += 10;
+    }
+
+    // Description
+    if (job.description && job.description.length > 0) {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
-      const bulletLines = doc.splitTextToSize(line, maxWidth - 10);
-      for (const bulletLine of bulletLines) {
+
+      const descText = job.description.join(' ');
+      const descLines = doc.splitTextToSize(descText, maxWidth);
+
+      for (const line of descLines) {
         if (currentY > pageHeight - 30) {
           doc.addPage();
           currentY = margin;
         }
-        doc.text(bulletLine, margin + 10, currentY);
-        currentY += 4;
+        doc.text(line, margin, currentY);
+        currentY += 5;
       }
+      currentY += 3;
     }
-    // Regular description text
-    else if (line.trim()) {
+
+    // Achievements
+    if (job.achievements && job.achievements.length > 0) {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
-      const descLines = doc.splitTextToSize(line, maxWidth);
-      for (const descLine of descLines) {
+
+      for (const achievement of job.achievements) {
         if (currentY > pageHeight - 30) {
           doc.addPage();
           currentY = margin;
         }
-        doc.text(descLine, margin, currentY);
-        currentY += 4;
+
+        const bulletText = `• ${achievement}`;
+        const bulletLines = doc.splitTextToSize(bulletText, maxWidth - 10);
+
+        for (const line of bulletLines) {
+          if (currentY > pageHeight - 30) {
+            doc.addPage();
+            currentY = margin;
+          }
+          doc.text(line, margin + 5, currentY);
+          currentY += 5;
+        }
       }
     }
   }
@@ -293,14 +314,32 @@ function addSkillsSection(doc: jsPDF, skillsText: string, startY: number, maxWid
     }
 
     if (line.includes(':')) {
-      // Skill category
+      // Skill category header
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(45, 74, 107);
+      doc.setTextColor(31, 78, 121);
       doc.text(line, margin, currentY);
-      currentY += 6;
-    } else {
-      // Skills list
+      currentY += 8;
+    } else if (line.includes('•') || line.includes('|')) {
+      // Skills list with bullets or separators
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+
+      // Clean up the line and format it nicely
+      const cleanLine = line.replace(/•/g, '').replace(/\|/g, '•').trim();
+      const skillLines = doc.splitTextToSize(cleanLine, maxWidth);
+
+      for (const skillLine of skillLines) {
+        if (currentY > pageHeight - 30) {
+          doc.addPage();
+          currentY = margin;
+        }
+        doc.text(skillLine, margin, currentY);
+        currentY += 6;
+      }
+    } else if (line.trim()) {
+      // Regular skills text
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
@@ -310,8 +349,8 @@ function addSkillsSection(doc: jsPDF, skillsText: string, startY: number, maxWid
           doc.addPage();
           currentY = margin;
         }
-        doc.text(skillLine, margin + 10, currentY);
-        currentY += 4;
+        doc.text(skillLine, margin, currentY);
+        currentY += 6;
       }
     }
   }
@@ -330,10 +369,17 @@ function getSectionTitle(sectionKey: string): string {
 }
 
 function parseResumeContent(content: string): any {
-  const sections: any = {};
+  const sections: any = {
+    summary: '',
+    skills: '',
+    experience: [],
+    education: ''
+  };
+
   const lines = content.split('\n').map(line => line.trim()).filter(line => line);
   let currentSection = '';
   let sectionContent: string[] = [];
+  let currentJob: any = null;
 
   // Section patterns
   const sectionPatterns = {
@@ -358,31 +404,56 @@ function parseResumeContent(content: string): any {
     if (foundSection) {
       // Save previous section
       if (currentSection && sectionContent.length > 0) {
-        sections[currentSection] = sectionContent.join('\n').trim();
+        if (currentSection === 'experience' && currentJob) {
+          sections.experience.push(currentJob);
+          currentJob = null;
+        } else if (currentSection !== 'experience') {
+          sections[currentSection] = sectionContent.join('\n').trim();
+        }
       }
 
       // Start new section
       currentSection = foundSection;
       sectionContent = [];
+    } else if (currentSection === 'experience') {
+      // Handle experience section with structured job entries
+      if (line.includes('|') && (line.includes('Director') || line.includes('Manager') || line.includes('Lead') || line.includes('Senior') || line.includes('Analyst'))) {
+        // This is a job title line
+        if (currentJob) {
+          sections.experience.push(currentJob);
+        }
+        const parts = line.split('|').map(p => p.trim());
+        currentJob = {
+          title: parts[0] || line,
+          company: parts[1] || '',
+          location: parts[2] || '',
+          dates: '',
+          description: [],
+          achievements: []
+        };
+      } else if (currentJob && /\d{4}/.test(line) && (line.includes('-') || line.includes('Present'))) {
+        // This is a date line
+        currentJob.dates = line;
+      } else if (currentJob && (line.startsWith('•') || line.startsWith('-'))) {
+        // This is an achievement bullet
+        currentJob.achievements.push(line.replace(/^[•\-]\s*/, ''));
+      } else if (currentJob && line.trim()) {
+        // This is description text
+        currentJob.description.push(line);
+      }
     } else if (currentSection) {
       // Add content to current section
-      sectionContent.push(line);
-    } else if (i <= 2 && !line.includes('@') && !line.includes('|')) {
-      // Early lines that might be personal info (skip for now as handled by profile)
-      continue;
-    } else {
-      // Content without clear section - treat as summary
-      if (!currentSection) {
-        currentSection = 'summary';
-        sectionContent = [];
-      }
       sectionContent.push(line);
     }
   }
 
   // Add final section
   if (currentSection && sectionContent.length > 0) {
-    sections[currentSection] = sectionContent.join('\n').trim();
+    if (currentSection === 'experience' && currentJob) {
+      sections.experience.push(currentJob);
+    } else if (currentSection !== 'experience') {
+      sections[currentSection] = sectionContent.join('\n').trim();
+    }
   }
 
   return sections;
