@@ -51,6 +51,11 @@ function createResumeDocument(content: string, profile?: any): Document {
 
   const children: Paragraph[] = [];
 
+  // Add personal information header first if available
+  if (profile?.personalInfo) {
+    children.push(...createPersonalInfoHeader(profile.personalInfo));
+  }
+
   // Parse the UI-generated content directly (no AI needed)
   const lines = content.split('\n').map(line => line.trim()).filter(line => line);
 
@@ -60,17 +65,18 @@ function createResumeDocument(content: string, profile?: any): Document {
     // Skip empty lines
     if (!line) continue;
 
-    // Section headers (all caps)
-    if (line === line.toUpperCase() &&
-        (line.includes('PROFESSIONAL SUMMARY') ||
-         line.includes('CORE COMPETENCIES') ||
-         line.includes('PROFESSIONAL EXPERIENCE') ||
-         line.includes('EDUCATION'))) {
+    // Section headers (remove asterisks and format properly)
+    const cleanLine = line.replace(/\*\*/g, '').trim();
+    if (cleanLine === cleanLine.toUpperCase() &&
+        (cleanLine.includes('PROFESSIONAL SUMMARY') ||
+         cleanLine.includes('CORE COMPETENCIES') ||
+         cleanLine.includes('PROFESSIONAL EXPERIENCE') ||
+         cleanLine.includes('EDUCATION'))) {
 
       children.push(new Paragraph({
         children: [
           new TextRun({
-            text: line,
+            text: cleanLine,
             bold: true,
             size: 28,
             color: "1F4E79",
@@ -87,16 +93,17 @@ function createResumeDocument(content: string, profile?: any): Document {
         }
       }));
     }
-    // Job titles (contain | and job keywords)
+    // Job titles (contain | and job keywords) - clean asterisks
     else if (line.includes('|') &&
              (line.includes('Director') || line.includes('Manager') ||
               line.includes('Lead') || line.includes('Senior') ||
               line.includes('Analyst') || line.includes('Engineer'))) {
 
+      const cleanJobTitle = line.replace(/\*\*/g, '').trim();
       children.push(new Paragraph({
         children: [
           new TextRun({
-            text: line,
+            text: cleanJobTitle,
             bold: true,
             size: 24,
             color: "1F4E79",
@@ -150,18 +157,21 @@ function createResumeDocument(content: string, profile?: any): Document {
         spacing: { before: 200, after: 100 }
       }));
     }
-    // Regular paragraphs
+    // Regular paragraphs - clean asterisks
     else {
-      children.push(new Paragraph({
-        children: [
-          new TextRun({
-            text: line,
-            size: 20,
-            font: "Calibri"
-          })
-        ],
-        spacing: { after: 150 }
-      }));
+      const cleanText = line.replace(/\*\*/g, '').trim();
+      if (cleanText) { // Only add non-empty lines
+        children.push(new Paragraph({
+          children: [
+            new TextRun({
+              text: cleanText,
+              size: 20,
+              font: "Calibri"
+            })
+          ],
+          spacing: { after: 150 }
+        }));
+      }
     }
   }
 
@@ -180,6 +190,79 @@ function createResumeDocument(content: string, profile?: any): Document {
       children
     }]
   });
+}
+
+function createPersonalInfoHeader(personalInfo: any): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+
+  // Add full name as header
+  if (personalInfo.firstName || personalInfo.lastName) {
+    const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim();
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: fullName,
+            bold: true,
+            size: 32,
+            color: "1F4E79",
+            font: "Calibri"
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 150 }
+      })
+    );
+  }
+
+  // Add contact information
+  const contactParts = [];
+  if (personalInfo.email) contactParts.push(personalInfo.email);
+  if (personalInfo.phone) contactParts.push(personalInfo.phone);
+  if (personalInfo.location) contactParts.push(personalInfo.location);
+
+  if (contactParts.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: contactParts.join(' | '),
+            size: 20,
+            color: "666666",
+            font: "Calibri"
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 100 }
+      })
+    );
+  }
+
+  // Add LinkedIn if available
+  if (personalInfo.linkedin) {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `LinkedIn: ${personalInfo.linkedin}`,
+            size: 18,
+            color: "666666",
+            font: "Calibri"
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 300 }
+      })
+    );
+  } else if (contactParts.length > 0) {
+    // Add extra spacing if no LinkedIn
+    const lastParagraph = paragraphs[paragraphs.length - 1];
+    if (lastParagraph) {
+      lastParagraph.spacing = { after: 300 };
+    }
+  }
+
+  return paragraphs;
 }
 
 function createCoverLetterDocument(content: string, profile?: any): Document {
