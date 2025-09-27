@@ -1,11 +1,13 @@
 import { neon } from '@neondatabase/serverless';
 
 // Allow builds to succeed without database URL (for static generation)
-if (!process.env.STORAGE_DATABASE_URL && process.env.NODE_ENV !== 'development') {
-  console.warn('⚠️ STORAGE_DATABASE_URL not set - database features will be disabled');
+const databaseUrl = process.env.STORAGE_DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL;
+
+if (!databaseUrl && process.env.NODE_ENV !== 'development') {
+  console.warn('⚠️ No database URL found - checking STORAGE_DATABASE_URL, POSTGRES_URL, DATABASE_URL');
 }
 
-export const sql = process.env.STORAGE_DATABASE_URL ? neon(process.env.STORAGE_DATABASE_URL) : null;
+export const sql = databaseUrl ? neon(databaseUrl) : null;
 
 // Database initialization function
 export async function initializeDatabase() {
