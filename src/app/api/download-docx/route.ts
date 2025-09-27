@@ -249,6 +249,26 @@ function createResumeDocument(content: string, profile?: any): Document {
       continue;
     }
 
+    // Detect date ranges in plain text format (like "January 2020 - Present")
+    if ((line.includes(' - ') && (line.includes('Present') || /\d{4}/.test(line))) ||
+        (/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/.test(line))) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: line,
+              italic: true,
+              size: 20,
+              color: "666666"
+            })
+          ],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 200 }
+        })
+      );
+      continue;
+    }
+
     // Job titles and company info (contains | but not dates)
     if (line.includes('|') && !line.startsWith('•') && !line.startsWith('-') &&
         !/\d{4}-\d{2}-\d{2}/.test(line) && !line.includes('Present')) {
@@ -266,6 +286,36 @@ function createResumeDocument(content: string, profile?: any): Document {
         })
       );
       continue;
+    }
+
+    // Detect standalone job titles (line before company/location line)
+    // Job title is usually on its own line, followed by company | location line
+    if (i < lines.length - 1) {
+      const nextLine = lines[i + 1];
+
+      // If current line doesn't contain special characters and next line has |
+      if (!line.includes('|') && !line.includes('@') && !line.includes('•') &&
+          !line.includes('-') && !line.includes(':') &&
+          nextLine && nextLine.includes('|') && !nextLine.includes('Present') &&
+          !/^\d{4}/.test(nextLine) && !/\d{4}-\d{2}-\d{2}/.test(nextLine) &&
+          !isHeader && line.length > 3 && line.length < 100) {
+
+        // This looks like a job title
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: line,
+                bold: true,
+                size: 26,
+                color: "1F4E79"
+              })
+            ],
+            spacing: { before: 400, after: 100 }
+          })
+        );
+        continue;
+      }
     }
 
     // Bullet points and achievements
