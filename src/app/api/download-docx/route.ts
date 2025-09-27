@@ -926,8 +926,41 @@ function parseEducationSection(lines: string[]): any[] {
 }
 
 function createCoverLetterDocument(content: string, profile?: any): Document {
-  // Split content into paragraphs
-  const paragraphs = content.split('\n\n').filter(p => p.trim());
+  // Clean the content to remove any duplicate header information
+  let cleanedContent = content;
+
+  // Remove header information that might be in the content already
+  if (profile?.personalInfo) {
+    const { firstName, lastName, email, phone, location, linkedin } = profile.personalInfo;
+
+    // Create patterns to match header lines we want to remove
+    const headerPatterns = [
+      new RegExp(`^${firstName}\\s+${lastName}.*$`, 'gm'),
+      new RegExp(`^.*${email}.*$`, 'gm'),
+      new RegExp(`^.*${phone}.*$`, 'gm'),
+      new RegExp(`^.*${location}.*$`, 'gm'),
+      new RegExp(`^.*LinkedIn:.*$`, 'gm'),
+      new RegExp(`^.*Portfolio:.*$`, 'gm'),
+      new RegExp(`^\\w+\\s+\\d{1,2},\\s+\\d{4}$`, 'gm'), // Date pattern
+      new RegExp(`^.*Hiring Team.*$`, 'gm'),
+      new RegExp(`^Re:.*Position.*$`, 'gm')
+    ];
+
+    // Remove header lines from content
+    headerPatterns.forEach(pattern => {
+      cleanedContent = cleanedContent.replace(pattern, '');
+    });
+
+    // Clean up extra whitespace and empty lines
+    cleanedContent = cleanedContent
+      .split('\n')
+      .filter(line => line.trim().length > 0)
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n'); // Replace multiple newlines with double newlines
+  }
+
+  // Split cleaned content into paragraphs
+  const paragraphs = cleanedContent.split('\n\n').filter(p => p.trim());
 
   const children: Paragraph[] = [];
 
