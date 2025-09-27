@@ -7,6 +7,10 @@ import { Skill } from '@/types/profile';
 export default function SkillsForm() {
   const { state, dispatch } = useProfile();
   const { skills } = state.profile;
+
+  // Debug logging to see what skills data we have
+  console.log('🎨 SkillsForm render - skills count:', skills.length);
+  console.log('🎨 SkillsForm skills data:', skills);
   const [newSkill, setNewSkill] = useState<Omit<Skill, 'id'>>({
     name: '',
     category: 'technical',

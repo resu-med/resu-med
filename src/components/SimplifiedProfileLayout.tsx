@@ -82,31 +82,31 @@ export default function SimplifiedProfileLayout({
       {/* Simplified Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          {/* Progress Steps - Simplified */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-1">
+          {/* Progress Steps - Larger and More Prominent */}
+          <div className="mb-6">
+            <div className="flex items-center justify-center space-x-2 mb-4">
               {sections.map((section, index) => (
                 <button
                   key={section.id}
                   onClick={() => onNavigateToSection(section.id)}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  className={`flex items-center space-x-2 px-4 py-3 rounded-xl text-base font-medium transition-all ${
                     currentSection === section.id
-                      ? 'bg-teal-100 text-teal-700 font-medium'
+                      ? 'bg-teal-600 text-white shadow-lg scale-105'
                       : index <= currentIndex
-                      ? 'text-green-600 hover:bg-green-50'
-                      : 'text-gray-400 hover:bg-gray-50'
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="text-base">{section.icon}</span>
-                  <span className="hidden sm:inline">{section.label}</span>
+                  <span className="text-xl">{section.icon}</span>
+                  <span className="hidden md:inline">{section.label}</span>
                   {index <= currentIndex && currentSection !== section.id && (
-                    <span className="text-xs">✓</span>
+                    <span className="text-sm bg-green-600 text-white rounded-full w-5 h-5 flex items-center justify-center">✓</span>
                   )}
                 </button>
               ))}
             </div>
 
-            <div className="text-sm text-gray-600">
+            <div className="text-center text-sm text-gray-600">
               {completeness.overall.percentage}% Complete
             </div>
           </div>

@@ -86,7 +86,16 @@ export default function ExperienceForm() {
         </div>
       ) : (
         <div className="space-y-6">
-          {experience.map((exp) => (
+          {experience
+            .slice()
+            .sort((a, b) => {
+              // Sort by start date in descending order (most recent first)
+              if (!a.startDate && !b.startDate) return 0;
+              if (!a.startDate) return 1;
+              if (!b.startDate) return -1;
+              return b.startDate.localeCompare(a.startDate);
+            })
+            .map((exp) => (
             <div key={exp.id} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
               {editingId === exp.id ? (
                 <div className="space-y-4">
