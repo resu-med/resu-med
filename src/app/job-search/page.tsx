@@ -160,7 +160,17 @@ function JobSearchPageContent() {
 
       if (response.ok) {
         const data = await response.json();
-        setJobResults(data.jobs);
+
+        // Check if we have a setup message (no API keys configured)
+        if (data.message && data.setupInstructions) {
+          console.log('⚠️ API setup required:', data.message);
+          alert(`${data.message}\n\nSetup Instructions:\n• Reed API: ${data.setupInstructions.reed}\n• Adzuna API: ${data.setupInstructions.adzuna}\n\nAdd the API keys to your environment variables and restart the application.`);
+          setJobResults([]);
+          setActiveSources([]);
+          return;
+        }
+
+        setJobResults(data.jobs || []);
         setActiveSources(data.sources || []);
         setPagination({
           currentPage: data.currentPage,
