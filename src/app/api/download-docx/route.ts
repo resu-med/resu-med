@@ -178,10 +178,10 @@ function createPersonalInfoSection(personalInfo: any): Paragraph[] {
 async function parseResumeWithAI(content: string): Promise<any> {
   try {
     // If OpenAI is available, use it for intelligent parsing
-    if (process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({
-        apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+        apiKey: process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY,
       });
 
       const prompt = `
