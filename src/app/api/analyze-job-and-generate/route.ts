@@ -33,6 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`🎯 Analyzing job: ${jobTitle} at ${companyName}`);
+    console.log('🔑 OpenAI API Key check:', {
+      hasOpenAI: !!(process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY),
+      keyLength: (process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY)?.length || 0
+    });
 
     // Use OpenAI if available, otherwise use intelligent fallback
     let analysis: JobAnalysis;
@@ -41,10 +45,19 @@ export async function POST(request: NextRequest) {
 
     if (process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
       console.log('🤖 Using OpenAI for advanced analysis and generation');
-      const result = await generateWithOpenAI(jobDescription, jobTitle, companyName, profile);
-      analysis = result.analysis;
-      resume = result.resume;
-      coverLetter = result.coverLetter;
+      try {
+        const result = await generateWithOpenAI(jobDescription, jobTitle, companyName, profile);
+        analysis = result.analysis;
+        resume = result.resume;
+        coverLetter = result.coverLetter;
+        console.log('✅ OpenAI generation successful');
+      } catch (error) {
+        console.error('❌ OpenAI generation failed, falling back:', error);
+        const result = await generateWithIntelligentFallback(jobDescription, jobTitle, companyName, profile);
+        analysis = result.analysis;
+        resume = result.resume;
+        coverLetter = result.coverLetter;
+      }
     } else {
       console.log('🧠 Using intelligent fallback analysis and generation');
       const result = await generateWithIntelligentFallback(jobDescription, jobTitle, companyName, profile);
@@ -69,9 +82,13 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateWithOpenAI(jobDescription: string, jobTitle: string, companyName: string, profile: UserProfile) {
+  console.log('🚀 Starting OpenAI generation...');
   const OpenAI = (await import('openai')).default;
+  const apiKey = process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY;
+  console.log('🔑 API Key found:', !!apiKey, 'Length:', apiKey?.length);
+
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    apiKey: apiKey,
   });
 
   // Enhanced job description analysis
@@ -102,6 +119,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     Focus on extracting specific requirements, metrics, technologies, and qualifications. Identify ALL ATS keywords.
   `;
 
+  console.log('📊 Starting job analysis...');
   const analysisResponse = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages: [
@@ -111,6 +129,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     temperature: 0.3,
     max_tokens: 1000
   });
+  console.log('✅ Job analysis completed');
 
   let analysis: JobAnalysis;
   try {
@@ -186,7 +205,9 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - Groups related skills logically
 
     3. **PROFESSIONAL EXPERIENCE**: For each role:
-       - Format as: Job Title, Company Name | Location, Start Date - End Date
+       - USE EXACT JOB TITLES from candidate's profile - DO NOT modify or change them
+       - USE EXACT COMPANY NAMES from candidate's profile - DO NOT modify them
+       - Format as: EXACT Job Title, EXACT Company Name | Location, Start Date - End Date
        - NO markdown formatting (no ** or * characters)
        - Include full employment dates (month/year format)
        - Write compelling bullet points (4-6 per role for most recent)
@@ -196,6 +217,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - Use keywords from job description naturally
        - Show progression and growth
        - List most recent experience FIRST
+       - CRITICAL: Do NOT change job titles to match target role
 
     4. **EDUCATION & CERTIFICATIONS**:
        - Highlight education that matches requirements
@@ -241,6 +263,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     - The output must be ready to send directly to a recruiter
   `;
 
+  console.log('📝 Starting resume generation...');
   const resumeResponse = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages: [
@@ -250,6 +273,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     temperature: 0.3,
     max_tokens: 3000
   });
+  console.log('✅ Resume generation completed');
 
   // Generate highly targeted and compelling cover letter
   const coverLetterPrompt = `
@@ -349,6 +373,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     IMPORTANT: Return ONLY the complete cover letter content. No explanations or meta-commentary. The output must be ready to send directly to a hiring manager and should make them excited to interview this candidate.
   `;
 
+  console.log('📄 Starting cover letter generation...');
   const coverLetterResponse = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages: [
@@ -358,6 +383,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     temperature: 0.5,
     max_tokens: 1500
   });
+  console.log('✅ Cover letter generation completed');
 
   return {
     analysis,
