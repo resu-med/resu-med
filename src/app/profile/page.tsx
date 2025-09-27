@@ -15,8 +15,7 @@ import ResumeUpload from '@/components/forms/ResumeUpload';
 import { calculateProfileCompleteness } from '@/lib/profileCompleteness';
 import InlineProgressCard from '@/components/InlineProgressCard';
 import QuickActionModals from '@/components/QuickActionModals';
-import FloatingAssistant from '@/components/FloatingAssistant';
-import SectionNavigation from '@/components/SectionNavigation';
+import SimplifiedProfileLayout from '@/components/SimplifiedProfileLayout';
 type ProfileSection = 'upload' | 'personal' | 'experience' | 'education' | 'skills' | 'interests';
 
 type SectionConfig = {
@@ -98,178 +97,29 @@ function ProfilePageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation Header */}
-      <div className="sticky top-0 z-50">
-        <ResponsiveNavigation
-          currentPage="profile"
-          currentSection={activeSection}
-          onNavigateToSection={handleNavigateToSection}
-        />
-      </div>
+    <div>
+      {/* Keep main navigation */}
+      <ResponsiveNavigation
+        currentPage="profile"
+        currentSection={activeSection}
+        onNavigateToSection={handleNavigateToSection}
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
+      {/* Simplified Layout */}
+      <SimplifiedProfileLayout
+        currentSection={activeSection}
+        onNavigateToSection={handleNavigateToSection}
+        onQuickAction={handleQuickAction}
+        profile={state.profile}
+      >
+        {renderSection()}
+      </SimplifiedProfileLayout>
 
-        {/* Inline Progress Card */}
-        <InlineProgressCard
-          profile={state.profile}
-          onNavigateToSection={handleNavigateToSection}
-          onQuickAction={handleQuickAction}
-        />
-
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Consolidated Profile Navigation */}
-          <div className="lg:w-72 flex-shrink-0">
-            <nav className="bg-white rounded-xl shadow-sm border border-teal-100 p-6">
-              {/* Header with Overall Progress */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900 flex items-center">
-                    <div className="w-2 h-2 bg-teal-500 rounded-full mr-2"></div>
-                    Profile Sections
-                  </h3>
-                  <span className="text-sm font-medium text-teal-600">
-                    {Math.round((sections.filter(section => getCompletionStatus(section.id as ProfileSection)).length / sections.length) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-teal-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${(sections.filter(section => getCompletionStatus(section.id as ProfileSection)).length / sections.length) * 100}%`
-                    }}
-                  ></div>
-                </div>
-              </div>
-
-              {/* Actionable Section List */}
-              <ul className="space-y-2">
-                {sections.map((section) => {
-                  const isCompleted = getCompletionStatus(section.id as ProfileSection);
-                  const sectionCompleteness = completeness.sections.find(s => s.id === section.id);
-                  const hasIssues = sectionCompleteness?.issues.length > 0;
-
-                  return (
-                    <li key={section.id}>
-                      <button
-                        onClick={() => setActiveSection(section.id as ProfileSection)}
-                        className={`w-full text-left rounded-lg transition-all p-3 ${
-                          activeSection === section.id
-                            ? 'bg-gradient-to-r from-teal-50 to-blue-50 text-teal-700 border border-teal-200 shadow-sm'
-                            : 'text-gray-700 hover:bg-gray-50 border border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <span className="text-lg mr-3">{section.icon}</span>
-                            <div>
-                              <span className="font-medium block">{section.label}</span>
-                              {hasIssues && !isCompleted && (
-                                <span className="text-xs text-gray-500">
-                                  {sectionCompleteness.issues[0]}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {isCompleted ? (
-                              <div className="flex items-center text-xs text-green-600 font-medium">
-                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                                <span className="hidden sm:inline">Complete</span>
-                              </div>
-                            ) : hasIssues ? (
-                              <div className="text-xs text-amber-600 font-medium">
-                                {sectionCompleteness.estimatedTime}
-                              </div>
-                            ) : (
-                              <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {/* Quick Actions for Incomplete Items */}
-              {completeness.overall.percentage < 100 && (
-                <div className="mt-6 pt-4 border-t border-gray-100">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Actions</h4>
-                  <div className="space-y-2">
-                    {completeness.sections
-                      .filter(section => section.priority === 'high' && section.issues.length > 0)
-                      .slice(0, 2)
-                      .map((section) => (
-                        <button
-                          key={section.id}
-                          onClick={() => setActiveSection(section.id as ProfileSection)}
-                          className="w-full text-left p-2 rounded border border-teal-200 bg-teal-50 hover:bg-teal-100 transition-colors"
-                        >
-                          <div className="text-sm font-medium text-teal-800">{section.name}</div>
-                          <div className="text-xs text-teal-600">{section.suggestions[0]}</div>
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </nav>
-          </div>
-
-          {/* Enhanced Main Content */}
-          <div className="flex-1">
-            <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-teal-50 to-blue-50 px-6 py-4 border-b border-teal-100">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">
-                    {sections.find(s => s.id === activeSection)?.icon}
-                  </span>
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      {sections.find(s => s.id === activeSection)?.label}
-                    </h2>
-                    <p className="text-sm text-gray-600 mb-1">
-                      {sections.find(s => s.id === activeSection)?.description}
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <p className="text-sm text-teal-600">
-                        {getCompletionStatus(activeSection) ? '✅ Complete' : '⏳ In Progress'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="p-6 lg:p-8">
-                {renderSection()}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Floating Assistant */}
-        <FloatingAssistant
-          profile={state.profile}
-          currentSection={activeSection}
-          onNavigateToSection={handleNavigateToSection}
-          onQuickAction={handleQuickAction}
-        />
-
-        {/* Quick Action Modals */}
-        <QuickActionModals
-          activeAction={activeQuickAction}
-          onClose={() => setActiveQuickAction(null)}
-        />
-
-        {/* Section Navigation */}
-        <SectionNavigation
-          currentSection={activeSection}
-          onNavigateToSection={handleNavigateToSection}
-          onQuickAction={handleQuickAction}
-          profile={state.profile}
-        />
-      </div>
+      {/* Quick Action Modals */}
+      <QuickActionModals
+        activeAction={activeQuickAction}
+        onClose={() => setActiveQuickAction(null)}
+      />
     </div>
   );
 }
