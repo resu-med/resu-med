@@ -230,6 +230,47 @@ function TemplatesPageContent() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!generatedContent) return;
+
+    const content = activeTab === 'resume' ? generatedContent.resume : generatedContent.coverLetter;
+    const filename = activeTab === 'resume'
+      ? `${state.profile.personalInfo.firstName}_${state.profile.personalInfo.lastName}_Resume.pdf`
+      : `${state.profile.personalInfo.firstName}_${state.profile.personalInfo.lastName}_Cover_Letter.pdf`;
+
+    try {
+      const response = await fetch('/api/download-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          type: activeTab,
+          filename,
+          profile: state.profile
+        })
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('Failed to download PDF');
+        alert('Failed to download document. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('An error occurred while downloading. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Header */}
@@ -502,7 +543,10 @@ function TemplatesPageContent() {
                     </svg>
                     <span>Download as DOCX</span>
                   </button>
-                  <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2">
+                  <button
+                    onClick={handleDownloadPdf}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"
+                  >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
