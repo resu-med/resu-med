@@ -16,6 +16,7 @@ import { calculateProfileCompleteness } from '@/lib/profileCompleteness';
 import InlineProgressCard from '@/components/InlineProgressCard';
 import QuickActionModals from '@/components/QuickActionModals';
 import FloatingAssistant from '@/components/FloatingAssistant';
+import SectionNavigation from '@/components/SectionNavigation';
 type ProfileSection = 'upload' | 'personal' | 'experience' | 'education' | 'skills' | 'interests';
 
 type SectionConfig = {
@@ -107,7 +108,7 @@ function ProfilePageContent() {
         />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32">
 
         {/* Inline Progress Card */}
         <InlineProgressCard
@@ -259,6 +260,14 @@ function ProfilePageContent() {
         <QuickActionModals
           activeAction={activeQuickAction}
           onClose={() => setActiveQuickAction(null)}
+        />
+
+        {/* Section Navigation */}
+        <SectionNavigation
+          currentSection={activeSection}
+          onNavigateToSection={handleNavigateToSection}
+          onQuickAction={handleQuickAction}
+          profile={state.profile}
         />
       </div>
     </div>
