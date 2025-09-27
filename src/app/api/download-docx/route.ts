@@ -640,15 +640,6 @@ function parseResumeContentFallback(content: string): any {
     } else if (currentSection) {
       // Add content to current section
       currentContent.push(line);
-    } else {
-      // Content before any section headers
-      if (!sections.length) {
-        sections.push({
-          type: "summary",
-          title: "PROFESSIONAL SUMMARY",
-          content: [{ type: "text", content: line }]
-        });
-      }
     }
   }
 
@@ -674,15 +665,49 @@ function parseContentForSection(lines: string[], sectionType: string): any[] {
 }
 
 function parseExperienceSection(lines: string[]): any[] {
+  console.log('🔍 Parsing experience section with lines:', lines);
   const jobs = [];
   let currentJob = null;
   let currentAchievements = [];
+  let expectingCompanyNext = false;
 
-  for (const line of lines) {
-    // Job title pattern (standalone line, not containing | or dates)
-    if (!line.includes('|') && !line.includes('•') &&
-        !/\d{4}/.test(line) && !line.includes('Present') &&
-        !line.includes('Key Achievements') && line.length > 5 && line.length < 100) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const nextLine = i < lines.length - 1 ? lines[i + 1] : null;
+
+    console.log(`📝 Processing line ${i}: "${line}"`);
+
+    // Enhanced job title detection
+    const isJobTitle = (
+      // Standalone line that doesn't contain common non-title patterns
+      !line.includes('|') &&
+      !line.includes('•') &&
+      !line.includes('-') &&
+      !/^\d{4}/.test(line) &&
+      !line.includes('Present') &&
+      !line.toLowerCase().includes('key achievements') &&
+      !line.toLowerCase().includes('achievements:') &&
+      line.length > 3 &&
+      line.length < 150 &&
+      // Either next line contains company info OR this looks like a title
+      (
+        (nextLine && (nextLine.includes('|') || /^\d{4}/.test(nextLine))) ||
+        line.toLowerCase().includes('manager') ||
+        line.toLowerCase().includes('director') ||
+        line.toLowerCase().includes('lead') ||
+        line.toLowerCase().includes('engineer') ||
+        line.toLowerCase().includes('analyst') ||
+        line.toLowerCase().includes('coordinator') ||
+        line.toLowerCase().includes('specialist') ||
+        line.toLowerCase().includes('owner') ||
+        line.toLowerCase().includes('head') ||
+        line.toLowerCase().includes('senior') ||
+        line.toLowerCase().includes('junior')
+      )
+    );
+
+    if (isJobTitle) {
+      console.log(`✅ Detected job title: "${line}"`);
 
       // Save previous job
       if (currentJob) {
@@ -690,6 +715,7 @@ function parseExperienceSection(lines: string[]): any[] {
           currentJob.achievements = currentAchievements;
         }
         jobs.push(currentJob);
+        console.log(`💼 Added job: ${currentJob.jobTitle} at ${currentJob.company}`);
       }
 
       // Start new job
@@ -699,24 +725,42 @@ function parseExperienceSection(lines: string[]): any[] {
         achievements: []
       };
       currentAchievements = [];
+      expectingCompanyNext = true;
     }
-    // Company and location (contains |)
+    // Company and location (contains | or is next after job title)
     else if (line.includes('|') && currentJob) {
       const parts = line.split('|').map(p => p.trim());
       currentJob.company = parts[0];
       if (parts[1]) currentJob.location = parts[1];
+      expectingCompanyNext = false;
+      console.log(`🏢 Set company: ${currentJob.company}, location: ${currentJob.location}`);
     }
-    // Dates (contains years or Present)
-    else if ((/\d{4}/.test(line) || line.includes('Present')) && currentJob) {
+    // Dates (contains years, months, or Present)
+    else if ((/\d{4}/.test(line) || line.includes('Present') || /\d{4}-\d{2}/.test(line)) && currentJob) {
       currentJob.dates = line;
+      console.log(`📅 Set dates: ${currentJob.dates}`);
     }
-    // Achievements (bullets or after "Key Achievements")
-    else if (line.startsWith('•') || line.startsWith('-')) {
+    // Key Achievements header
+    else if (line.toLowerCase().includes('key achievements') || line.toLowerCase().includes('achievements:')) {
+      // Just a header, continue to next line for actual achievements
+      console.log(`🎯 Found achievements header`);
+    }
+    // Achievements (bullets)
+    else if ((line.startsWith('•') || line.startsWith('-')) && currentJob) {
       currentAchievements.push(line);
+      console.log(`⭐ Added achievement: ${line.substring(0, 50)}...`);
     }
-    // Regular description
-    else if (line.length > 10 && currentJob && !currentJob.description) {
+    // Regular description (longer text that's not a title, company, or date)
+    else if (line.length > 15 && currentJob && !currentJob.description &&
+             !line.includes('|') && !/^\d{4}/.test(line) && !line.includes('Present')) {
       currentJob.description = line;
+      console.log(`📋 Set description: ${line.substring(0, 50)}...`);
+    }
+    // If we're expecting a company and this line doesn't match other patterns
+    else if (expectingCompanyNext && currentJob && !currentJob.company && line.length > 2) {
+      currentJob.company = line;
+      expectingCompanyNext = false;
+      console.log(`🏢 Set company (fallback): ${currentJob.company}`);
     }
   }
 
@@ -726,8 +770,10 @@ function parseExperienceSection(lines: string[]): any[] {
       currentJob.achievements = currentAchievements;
     }
     jobs.push(currentJob);
+    console.log(`💼 Added final job: ${currentJob.jobTitle} at ${currentJob.company}`);
   }
 
+  console.log(`📊 Total jobs parsed: ${jobs.length}`);
   return jobs;
 }
 
