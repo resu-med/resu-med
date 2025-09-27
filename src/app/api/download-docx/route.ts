@@ -91,36 +91,81 @@ function createPersonalInfoSection(personalInfo: any): Paragraph[] {
           new TextRun({
             text: fullName,
             bold: true,
-            size: 36,
+            size: 32,
             color: "1F4E79"
           })
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 200 }
+        spacing: { after: 150 }
       })
     );
   }
 
-  // Add contact information
-  const contactParts = [];
-  if (personalInfo.email) contactParts.push(personalInfo.email);
-  if (personalInfo.phone) contactParts.push(personalInfo.phone);
-  if (personalInfo.location) contactParts.push(personalInfo.location);
-
-  if (contactParts.length > 0) {
+  // Add contact information on separate lines for better formatting
+  if (personalInfo.location) {
     paragraphs.push(
       new Paragraph({
         children: [
           new TextRun({
-            text: contactParts.join(' | '),
-            size: 22,
+            text: personalInfo.location,
+            size: 20,
             color: "666666"
           })
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 400 }
+        spacing: { after: 100 }
       })
     );
+  }
+
+  // Email and phone on one line with separator
+  const contactLine = [];
+  if (personalInfo.email) contactLine.push(personalInfo.email);
+  if (personalInfo.phone) contactLine.push(personalInfo.phone);
+
+  if (contactLine.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: contactLine.join(' | '),
+            size: 20,
+            color: "666666"
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 100 }
+      })
+    );
+  }
+
+  // Add LinkedIn and website links if available
+  const socialLinks = [];
+  if (personalInfo.linkedin) socialLinks.push(`LinkedIn: ${personalInfo.linkedin}`);
+  if (personalInfo.website) socialLinks.push(`Portfolio: ${personalInfo.website}`);
+
+  if (socialLinks.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: socialLinks.join(' | '),
+            size: 18,
+            color: "666666"
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 300 }
+      })
+    );
+  } else {
+    // Add extra spacing if no social links
+    if (contactLine.length > 0) {
+      const lastParagraph = paragraphs[paragraphs.length - 1];
+      if (lastParagraph) {
+        lastParagraph.spacing = { after: 300 };
+      }
+    }
   }
 
   return paragraphs;
@@ -909,19 +954,52 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
       );
     }
 
-    // Add contact information
-    const contactParts = [];
-    if (personalInfo.email) contactParts.push(personalInfo.email);
-    if (personalInfo.phone) contactParts.push(personalInfo.phone);
-    if (personalInfo.location) contactParts.push(personalInfo.location);
-
-    if (contactParts.length > 0) {
+    // Add contact information with better formatting
+    if (personalInfo.location) {
       children.push(
         new Paragraph({
           children: [
             new TextRun({
-              text: contactParts.join(' | '),
+              text: personalInfo.location,
               size: 20,
+              color: "666666"
+            })
+          ],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 80 }
+        })
+      );
+    }
+
+    // Email and phone on one line
+    const contactLine = [];
+    if (personalInfo.email) contactLine.push(personalInfo.email);
+    if (personalInfo.phone) contactLine.push(personalInfo.phone);
+
+    if (contactLine.length > 0) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: contactLine.join(' | '),
+              size: 20,
+              color: "666666"
+            })
+          ],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 80 }
+        })
+      );
+    }
+
+    // Add LinkedIn if available
+    if (personalInfo.linkedin) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `LinkedIn: ${personalInfo.linkedin}`,
+              size: 18,
               color: "666666"
             })
           ],
@@ -929,6 +1007,14 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
           spacing: { after: 300 }
         })
       );
+    } else {
+      // Add extra spacing if no LinkedIn
+      if (contactLine.length > 0) {
+        const lastParagraph = children[children.length - 1];
+        if (lastParagraph) {
+          lastParagraph.spacing = { after: 300 };
+        }
+      }
     }
   }
 
