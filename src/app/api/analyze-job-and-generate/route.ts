@@ -142,8 +142,16 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     LinkedIn: ${profile.personalInfo.linkedin || 'N/A'}
     Professional Overview: ${profile.personalInfo.professionalOverview || 'Professional with relevant experience'}
 
-    DETAILED EXPERIENCE (MUST include all company names and dates prominently):
-    ${profile.experience.map(exp => `
+    DETAILED EXPERIENCE (MUST include all company names and dates prominently, most recent first):
+    ${[...profile.experience].sort((a, b) => {
+      // Current roles first
+      if (a.current && !b.current) return -1;
+      if (!a.current && b.current) return 1;
+      // Then sort by start date (most recent first)
+      const dateA = new Date(a.startDate || '1900-01-01');
+      const dateB = new Date(b.startDate || '1900-01-01');
+      return dateB.getTime() - dateA.getTime();
+    }).map(exp => `
     Position: ${exp.position}
     Company: ${exp.company}
     Location: ${exp.location}
@@ -178,8 +186,8 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - Groups related skills logically
 
     3. **PROFESSIONAL EXPERIENCE**: For each role:
-       - Format as: **Job Title**, **Company Name** | Location, *Start Date - End Date*
-       - Make job titles and company names bold and prominent
+       - Format as: Job Title, Company Name | Location, Start Date - End Date
+       - NO markdown formatting (no ** or * characters)
        - Include full employment dates (month/year format)
        - Write compelling bullet points (4-6 per role for most recent)
        - Start each bullet with strong action verbs
@@ -187,6 +195,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - Highlight responsibilities that align with target role
        - Use keywords from job description naturally
        - Show progression and growth
+       - List most recent experience FIRST
 
     4. **EDUCATION & CERTIFICATIONS**:
        - Highlight education that matches requirements
@@ -209,14 +218,16 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     CRITICAL FORMATTING REQUIREMENTS:
     - ALWAYS include company names prominently for each position
     - ALWAYS include employment dates (start and end dates)
-    - Format experience entries as: **Job Title**, **Company Name** | Location, *Month Year - Month Year*
+    - Format experience entries as: Job Title, Company Name | Location, Month Year - Month Year
+    - NO markdown formatting (no ** or * characters at all)
     - Company names and dates MUST be clearly visible and prominent
     - This is essential information that recruiters need to see immediately
+    - List most recent experience FIRST
 
     EXAMPLE FORMAT:
-    **Senior Software Engineer**
-    **Google Inc.** | Mountain View, CA
-    *January 2020 - Present*
+    Senior Software Engineer
+    Google Inc. | Mountain View, CA
+    January 2020 - Present
 
     • Developed scalable web applications using React and Node.js
     • Led a team of 5 engineers to deliver critical features on time
@@ -441,7 +452,19 @@ function generateTailoredResume(profile: UserProfile, jobTitle: string, companyN
   );
 
   // Enhanced experience descriptions with job-specific achievements
-  const enhancedExperience = experience.map((exp, index) => {
+  // Sort experience by most recent first (current roles first, then by start date)
+  const sortedExperience = [...experience].sort((a, b) => {
+    // Current roles first
+    if (a.current && !b.current) return -1;
+    if (!a.current && b.current) return 1;
+
+    // Then sort by start date (most recent first)
+    const dateA = new Date(a.startDate || '1900-01-01');
+    const dateB = new Date(b.startDate || '1900-01-01');
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  const enhancedExperience = sortedExperience.map((exp, index) => {
     const baseAchievements = exp.achievements && exp.achievements.length > 0
       ? exp.achievements
       : [
@@ -463,9 +486,10 @@ function generateTailoredResume(profile: UserProfile, jobTitle: string, companyN
     const startDate = exp.startDate || 'Start Date';
     const endDate = exp.current ? 'Present' : (exp.endDate || 'End Date');
 
-    return `**${exp.position}**
-**${exp.company}** | ${exp.location || 'Location'}
-*${startDate} - ${endDate}*
+    // Remove markdown formatting - use plain text
+    return `${exp.position || 'Position'}
+${exp.company || 'Company'} | ${exp.location || 'Location'}
+${startDate} - ${endDate}
 
 ${exp.description || 'Responsible for key duties and delivering results in this role.'}
 
