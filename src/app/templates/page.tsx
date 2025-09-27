@@ -349,7 +349,9 @@ function TemplatesPageContent() {
                       setActiveTab('resume');
                       clearPersistedData();
                     }}
-                    className="px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors"
+                    onTouchStart={() => {}}
+                    className="px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md transition-colors touch-manipulation min-h-[44px]"
+                    style={{ touchAction: 'manipulation' }}
                     title="Clear all data"
                   >
                     🗑️ Clear
@@ -410,8 +412,10 @@ function TemplatesPageContent() {
 
             <button
               onClick={handleAnalyzeAndGenerate}
+              onTouchStart={() => {}} // Improve mobile responsiveness
               disabled={isAnalyzing || !profileComplete}
-              className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 touch-manipulation min-h-[44px]"
+              style={{ touchAction: 'manipulation' }}
             >
               {isAnalyzing ? (
                 <>
@@ -499,21 +503,25 @@ function TemplatesPageContent() {
                   <div className="flex space-x-1 bg-white rounded-lg p-1">
                     <button
                       onClick={() => setActiveTab('resume')}
-                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      onTouchStart={() => {}}
+                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors touch-manipulation min-h-[44px] ${
                         activeTab === 'resume'
                           ? 'bg-teal-600 text-white shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
+                      style={{ touchAction: 'manipulation' }}
                     >
                       Resume
                     </button>
                     <button
                       onClick={() => setActiveTab('cover-letter')}
-                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      onTouchStart={() => {}}
+                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors touch-manipulation min-h-[44px] ${
                         activeTab === 'cover-letter'
                           ? 'bg-teal-600 text-white shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
+                      style={{ touchAction: 'manipulation' }}
                     >
                       Cover Letter
                     </button>
@@ -527,7 +535,9 @@ function TemplatesPageContent() {
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button
                     onClick={handleCopyToClipboard}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                    onTouchStart={() => {}}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2 touch-manipulation min-h-[44px]"
+                    style={{ touchAction: 'manipulation' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -536,7 +546,9 @@ function TemplatesPageContent() {
                   </button>
                   <button
                     onClick={handleDownloadDocx}
-                    className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors flex items-center space-x-2"
+                    onTouchStart={() => {}}
+                    className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors flex items-center space-x-2 touch-manipulation min-h-[44px]"
+                    style={{ touchAction: 'manipulation' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -545,7 +557,9 @@ function TemplatesPageContent() {
                   </button>
                   <button
                     onClick={handleDownloadPdf}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"
+                    onTouchStart={() => {}}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2 touch-manipulation min-h-[44px]"
+                    style={{ touchAction: 'manipulation' }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
