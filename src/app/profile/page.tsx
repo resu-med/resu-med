@@ -16,7 +16,6 @@ import { calculateProfileCompleteness } from '@/lib/profileCompleteness';
 import InlineProgressCard from '@/components/InlineProgressCard';
 import QuickActionModals from '@/components/QuickActionModals';
 import FloatingAssistant from '@/components/FloatingAssistant';
-import ProgressBreadcrumbs from '@/components/ProgressBreadcrumbs';
 type ProfileSection = 'upload' | 'personal' | 'experience' | 'education' | 'skills' | 'interests';
 
 type SectionConfig = {
@@ -101,36 +100,14 @@ function ProfilePageContent() {
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Header */}
       <div className="sticky top-0 z-50">
-        <ResponsiveNavigation currentPage="profile" />
-        <ProgressBreadcrumbs
-          profile={state.profile}
+        <ResponsiveNavigation
+          currentPage="profile"
           currentSection={activeSection}
           onNavigateToSection={handleNavigateToSection}
         />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="bg-gradient-to-br from-teal-500 to-blue-600 p-3 rounded-xl shadow-lg">
-              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM4 7h12v9a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" clipRule="evenodd" />
-                <path d="M9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-700 to-blue-700 bg-clip-text text-transparent">
-                Profile Builder
-              </h1>
-              <p className="text-teal-600 font-medium">Professional Resume Treatment System</p>
-            </div>
-          </div>
-
-          <p className="text-gray-600 text-lg max-w-3xl">
-            Build a comprehensive professional profile with clinical precision. Each section contributes to your complete career diagnosis and treatment plan.
-          </p>
-        </div>
 
         {/* Inline Progress Card */}
         <InlineProgressCard

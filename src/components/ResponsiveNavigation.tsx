@@ -3,14 +3,25 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import AccountDropdown from '@/components/AccountDropdown';
+import ProgressBreadcrumbs from '@/components/ProgressBreadcrumbs';
 
 interface ResponsiveNavigationProps {
   currentPage?: 'home' | 'profile' | 'job-search' | 'templates';
+  showProgressBreadcrumbs?: boolean;
+  currentSection?: string;
+  onNavigateToSection?: (sectionId: string) => void;
 }
 
-export default function ResponsiveNavigation({ currentPage }: ResponsiveNavigationProps) {
+export default function ResponsiveNavigation({
+  currentPage,
+  showProgressBreadcrumbs = true,
+  currentSection,
+  onNavigateToSection
+}: ResponsiveNavigationProps) {
   const { state: authState, logout } = useAuth();
+  const { state: profileState } = useProfile();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
@@ -36,9 +47,10 @@ export default function ResponsiveNavigation({ currentPage }: ResponsiveNavigati
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b-2 border-teal-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <div>
+      <nav className="bg-white shadow-sm border-b-2 border-teal-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
             <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-lg shadow-md">
@@ -191,5 +203,15 @@ export default function ResponsiveNavigation({ currentPage }: ResponsiveNavigati
         )}
       </div>
     </nav>
+
+    {/* Progress Breadcrumbs */}
+    {authState.isAuthenticated && showProgressBreadcrumbs && (
+      <ProgressBreadcrumbs
+        profile={profileState.profile}
+        currentSection={currentSection || 'upload'}
+        onNavigateToSection={onNavigateToSection || (() => {})}
+      />
+    )}
+  </div>
   );
 }

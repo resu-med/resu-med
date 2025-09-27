@@ -16,7 +16,8 @@
       "Bash(Fintech Lead\" now properly detected\n\n- Improve job title vs company line detection:\n  * Use keyword-based detection instead of pipe exclusion\n  * Check for job title keywords (manager, director, lead, senior, etc.)\n  * Distinguish between \"Job Title)",
       "Bash(npm run lint)",
       "Bash(git checkout:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []
