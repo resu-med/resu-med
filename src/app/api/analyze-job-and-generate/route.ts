@@ -161,7 +161,8 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     LinkedIn: ${profile.personalInfo.linkedin || 'N/A'}
     Professional Overview: ${profile.personalInfo.professionalOverview || 'Professional with relevant experience'}
 
-    CANDIDATE'S ACTUAL WORK EXPERIENCE (ONLY use this existing experience - DO NOT create fake experience):
+    CANDIDATE'S COMPLETE WORK EXPERIENCE (INCLUDE ALL ROLES - DO NOT truncate or limit):
+    IMPORTANT: Include EVERY single role below - do not skip any based on age or relevance
     ${[...profile.experience].sort((a, b) => {
       // Current roles first
       if (a.current && !b.current) return -1;
@@ -178,6 +179,8 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     Description: ${exp.description}
     Key Achievements: ${exp.achievements?.length > 0 ? exp.achievements.join(' • ') : 'Delivered results and exceeded expectations'}
     `).join('\n')}
+
+    TOTAL ROLES TO INCLUDE: ${profile.experience.length} (ALL must appear in final resume)
 
     EDUCATION:
     ${profile.education.map(edu => `
@@ -208,19 +211,22 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - Include both technical and soft skills they genuinely possess
 
     3. **PROFESSIONAL EXPERIENCE**: For each role:
+       - INCLUDE ALL WORK EXPERIENCE from candidate's profile - DO NOT truncate or limit
+       - SHOW COMPLETE CAREER HISTORY - include early career roles and progression
        - USE EXACT JOB TITLES from candidate's profile - DO NOT modify or change them
        - USE EXACT COMPANY NAMES from candidate's profile - DO NOT modify them
        - Format as: EXACT Job Title, EXACT Company Name | Location, Start Date - End Date
        - NO markdown formatting (no ** or * characters)
        - Include full employment dates (month/year format)
-       - Write compelling bullet points (4-6 per role for most recent)
+       - Write compelling bullet points (4-6 per role for most recent, 2-3 for older roles)
        - Start each bullet with strong action verbs
        - Quantify achievements with specific metrics where possible
        - Highlight responsibilities that align with target role
        - Use keywords from job description naturally
-       - Show progression and growth
-       - List most recent experience FIRST
+       - Show progression and growth throughout entire career
+       - List most recent experience FIRST, then ALL previous roles chronologically
        - CRITICAL: Do NOT change job titles to match target role
+       - CRITICAL: Include ALL roles regardless of age - complete career timeline
 
     4. **EDUCATION & CERTIFICATIONS**:
        - ONLY use the candidate's ACTUAL education from their profile
@@ -304,14 +310,14 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
     CANDIDATE BACKGROUND TO LEVERAGE:
     Professional Overview: ${profile.personalInfo.professionalOverview || 'Professional with relevant experience'}
 
-    Most Recent Experience:
+    Complete Professional Experience (showing career progression):
     ${[...profile.experience].sort((a, b) => {
       if (a.current && !b.current) return -1;
       if (!a.current && b.current) return 1;
       const dateA = new Date(a.startDate || '1900-01-01');
       const dateB = new Date(b.startDate || '1900-01-01');
       return dateB.getTime() - dateA.getTime();
-    }).slice(0, 3).map(exp => `
+    }).map(exp => `
     • ${exp.jobTitle || exp.position} at ${exp.company} (${exp.startDate} - ${exp.current ? 'Present' : exp.endDate})
       ${exp.description}
       Key achievements: ${exp.achievements?.slice(0, 2).join(' | ') || 'Delivered exceptional results'}
