@@ -140,7 +140,7 @@ function createResumeDocument(content: string, profile?: any): Document {
           new TextRun({
             text: line,
             bold: true,
-            size: 20,
+            size: 24, // 12pt in Word
             color: "2D4A6B",
             font: "Calibri"
           })
@@ -155,7 +155,7 @@ function createResumeDocument(content: string, profile?: any): Document {
           new TextRun({
             text: line,
             italic: true,
-            size: 20,
+            size: 24, // 12pt in Word
             color: "666666",
             font: "Calibri"
           })
@@ -169,7 +169,7 @@ function createResumeDocument(content: string, profile?: any): Document {
         children: [
           new TextRun({
             text: line,
-            size: 20,
+            size: 24, // 12pt in Word
             font: "Calibri"
           })
         ],
@@ -200,7 +200,7 @@ function createResumeDocument(content: string, profile?: any): Document {
           children: [
             new TextRun({
               text: cleanText,
-              size: 20,
+              size: 24, // 12pt in Word
               font: "Calibri"
             })
           ],
