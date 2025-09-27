@@ -72,8 +72,9 @@ function createResumeDocument(content: string, profile?: any): Document {
         (line.includes('John Fitzsimons') && !line.includes('|'))) continue;
 
     // Skip ATS keywords section
-    if (line.includes('ATS OPTIMIZATION KEYWORDS') ||
+    if (line.includes('ATS OPTIMIZATION') ||
         line.includes('Finance Director, Financial planning') ||
+        line.includes('Financial Director, Finance Director, Senior Management') ||
         line.includes('This resume is tailored to highlight') ||
         line.startsWith('---')) continue;
 
