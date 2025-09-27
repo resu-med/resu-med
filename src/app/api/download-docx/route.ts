@@ -83,7 +83,8 @@ function createResumeDocument(content: string, profile?: any): Document {
         (cleanLine.includes('PROFESSIONAL SUMMARY') ||
          cleanLine.includes('CORE COMPETENCIES') ||
          cleanLine.includes('PROFESSIONAL EXPERIENCE') ||
-         cleanLine.includes('EDUCATION'))) {
+         cleanLine.includes('EDUCATION') ||
+         cleanLine.includes('REFERENCES'))) {
 
       children.push(new Paragraph({
         children: [
