@@ -15,6 +15,10 @@ async function ensureDatabase() {
 // GET profile by user email
 export async function GET(request: NextRequest) {
   try {
+    if (!sql) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+
     await ensureDatabase();
 
     const { searchParams } = new URL(request.url);
@@ -99,6 +103,10 @@ export async function GET(request: NextRequest) {
 // POST/PUT - Save profile
 export async function POST(request: NextRequest) {
   try {
+    if (!sql) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+
     await ensureDatabase();
 
     const body = await request.json();

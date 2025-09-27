@@ -1,13 +1,18 @@
 import { neon } from '@neondatabase/serverless';
 
-if (!process.env.STORAGE_DATABASE_URL) {
-  throw new Error('STORAGE_DATABASE_URL environment variable is not set');
+// Allow builds to succeed without database URL (for static generation)
+if (!process.env.STORAGE_DATABASE_URL && process.env.NODE_ENV !== 'development') {
+  console.warn('⚠️ STORAGE_DATABASE_URL not set - database features will be disabled');
 }
 
-export const sql = neon(process.env.STORAGE_DATABASE_URL);
+export const sql = process.env.STORAGE_DATABASE_URL ? neon(process.env.STORAGE_DATABASE_URL) : null;
 
 // Database initialization function
 export async function initializeDatabase() {
+  if (!sql) {
+    throw new Error('Database not configured - STORAGE_DATABASE_URL environment variable missing');
+  }
+
   try {
     // Create users table
     await sql`

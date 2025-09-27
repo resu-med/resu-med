@@ -3,6 +3,13 @@ import { sql, initializeDatabase } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
+    if (!sql) {
+      return NextResponse.json({
+        success: false,
+        error: 'Database not configured - STORAGE_DATABASE_URL environment variable missing'
+      }, { status: 503 });
+    }
+
     console.log('Testing database connection...');
 
     // Test basic connection
