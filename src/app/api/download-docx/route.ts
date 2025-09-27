@@ -338,6 +338,11 @@ function createPersonalInfoHeader(personalInfo: any): Paragraph[] {
 function createCoverLetterDocument(content: string, profile?: any): Document {
   const children: Paragraph[] = [];
 
+  // Add personal information header first if available
+  if (profile?.personalInfo) {
+    children.push(...createPersonalInfoHeader(profile.personalInfo));
+  }
+
   // Split content exactly as it appears in the web UI (preserving line breaks)
   // The web UI uses whitespace-pre-line which preserves \n as line breaks
   const lines = content.split('\n');
@@ -360,28 +365,28 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
     let isBold = false;
     let fontSize = 22; // Default size
     let color = "000000"; // Default black
-    let isHeader = false;
     let isDate = false;
     let isRecipient = false;
     let isSalutation = false;
     let isSignature = false;
 
-    // Name (first line with person's name)
-    if (profile?.personalInfo && i < 3) {
-      const { firstName, lastName } = profile.personalInfo;
-      if (firstName && lastName && line.includes(firstName) && line.includes(lastName)) {
-        isHeader = true;
-        isBold = true;
-        fontSize = 28;
-        color = "1F4E79";
-      }
-    }
+    // Skip personal info lines (already added in header)
+    if (profile?.personalInfo) {
+      const { firstName, lastName, email, phone, location, linkedin } = profile.personalInfo;
 
-    // Contact info (email, phone, location)
-    if (line.includes('@') || line.includes('|') || /\d{5}/.test(line)) {
-      isHeader = true;
-      fontSize = 20;
-      color = "666666";
+      // Skip name line
+      if (firstName && lastName && line.includes(firstName) && line.includes(lastName) && i < 5) {
+        continue;
+      }
+
+      // Skip contact info lines
+      if ((email && line.includes(email)) ||
+          (phone && line.includes(phone)) ||
+          (location && line.includes(location)) ||
+          (linkedin && line.includes(linkedin)) ||
+          (line.includes('@') && line.includes('|'))) {
+        continue;
+      }
     }
 
     // Date line
@@ -425,16 +430,12 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
 
     // Create the paragraph with appropriate spacing
     let spacingAfter = 100;
-    if (isHeader && fontSize === 28) spacingAfter = 150; // Name
-    else if (isHeader) spacingAfter = 80; // Contact info
-    else if (isDate) spacingAfter = 300; // Date
+    if (isDate) spacingAfter = 300; // Date
     else if (isRecipient) spacingAfter = 200; // Company info
     else if (isSalutation) spacingAfter = 200; // Dear...
     else if (isSignature) spacingAfter = 0; // Signature
 
-    let alignment = AlignmentType.LEFT;
-    if (isHeader && fontSize === 28) alignment = AlignmentType.CENTER; // Center name
-    else if (isHeader && !line.includes('Re:')) alignment = AlignmentType.CENTER; // Center contact info
+    const alignment = AlignmentType.LEFT;
 
     children.push(new Paragraph({
       children: [
