@@ -220,9 +220,24 @@ async function parseResumeWithAI(content: string): Promise<any> {
         max_tokens: 2500
       });
 
-      const parsed = JSON.parse(response.choices[0].message.content || '{}');
-      console.log('🤖 AI parsed resume structure:', JSON.stringify(parsed, null, 2));
-      return parsed;
+      const aiResponse = response.choices[0].message.content || '{}';
+      console.log('🤖 Raw AI response:', aiResponse);
+
+      try {
+        const parsed = JSON.parse(aiResponse);
+        console.log('🤖 AI parsed resume structure:', JSON.stringify(parsed, null, 2));
+
+        // Validate the parsed structure
+        if (parsed.sections && Array.isArray(parsed.sections) && parsed.sections.length > 0) {
+          return parsed;
+        } else {
+          console.log('⚠️ AI response missing proper sections, using fallback');
+          throw new Error('Invalid AI response structure');
+        }
+      } catch (parseError) {
+        console.error('❌ Failed to parse AI response as JSON:', parseError);
+        throw parseError;
+      }
     }
   } catch (error) {
     console.error('❌ AI parsing failed:', error);
@@ -585,21 +600,213 @@ function createFallbackDocument(content: any): Paragraph[] {
 }
 
 function parseResumeContentFallback(content: string): any {
-  // Simple fallback parsing when AI is not available
+  console.log('🔄 Using fallback parsing for resume content');
   const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
 
-  return {
-    sections: [
-      {
-        type: "other",
-        title: "Resume Content",
-        content: lines.map(line => ({
-          type: "text",
-          content: line
-        }))
-      }
-    ]
+  const sections = [];
+  let currentSection = null;
+  let currentContent = [];
+
+  // Define section patterns
+  const sectionPatterns = {
+    summary: /^(PROFESSIONAL SUMMARY|SUMMARY|PROFILE|OVERVIEW)$/i,
+    skills: /^(CORE COMPETENCIES|SKILLS|COMPETENCIES|TECHNICAL SKILLS)$/i,
+    experience: /^(PROFESSIONAL EXPERIENCE|EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT)$/i,
+    education: /^(EDUCATION|ACADEMIC BACKGROUND|QUALIFICATIONS)$/i
   };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Check if this line is a section header
+    let foundSection = null;
+    for (const [sectionType, pattern] of Object.entries(sectionPatterns)) {
+      if (pattern.test(line)) {
+        foundSection = { type: sectionType, title: line };
+        break;
+      }
+    }
+
+    if (foundSection) {
+      // Save previous section
+      if (currentSection && currentContent.length > 0) {
+        currentSection.content = parseContentForSection(currentContent, currentSection.type);
+        sections.push(currentSection);
+      }
+
+      // Start new section
+      currentSection = foundSection;
+      currentContent = [];
+    } else if (currentSection) {
+      // Add content to current section
+      currentContent.push(line);
+    } else {
+      // Content before any section headers
+      if (!sections.length) {
+        sections.push({
+          type: "summary",
+          title: "PROFESSIONAL SUMMARY",
+          content: [{ type: "text", content: line }]
+        });
+      }
+    }
+  }
+
+  // Add final section
+  if (currentSection && currentContent.length > 0) {
+    currentSection.content = parseContentForSection(currentContent, currentSection.type);
+    sections.push(currentSection);
+  }
+
+  return { sections };
+}
+
+function parseContentForSection(lines: string[], sectionType: string): any[] {
+  if (sectionType === 'experience') {
+    return parseExperienceSection(lines);
+  } else if (sectionType === 'skills') {
+    return parseSkillsSection(lines);
+  } else if (sectionType === 'education') {
+    return parseEducationSection(lines);
+  } else {
+    return lines.map(line => ({ type: "text", content: line }));
+  }
+}
+
+function parseExperienceSection(lines: string[]): any[] {
+  const jobs = [];
+  let currentJob = null;
+  let currentAchievements = [];
+
+  for (const line of lines) {
+    // Job title pattern (standalone line, not containing | or dates)
+    if (!line.includes('|') && !line.includes('•') &&
+        !/\d{4}/.test(line) && !line.includes('Present') &&
+        !line.includes('Key Achievements') && line.length > 5 && line.length < 100) {
+
+      // Save previous job
+      if (currentJob) {
+        if (currentAchievements.length > 0) {
+          currentJob.achievements = currentAchievements;
+        }
+        jobs.push(currentJob);
+      }
+
+      // Start new job
+      currentJob = {
+        type: "job",
+        jobTitle: line,
+        achievements: []
+      };
+      currentAchievements = [];
+    }
+    // Company and location (contains |)
+    else if (line.includes('|') && currentJob) {
+      const parts = line.split('|').map(p => p.trim());
+      currentJob.company = parts[0];
+      if (parts[1]) currentJob.location = parts[1];
+    }
+    // Dates (contains years or Present)
+    else if ((/\d{4}/.test(line) || line.includes('Present')) && currentJob) {
+      currentJob.dates = line;
+    }
+    // Achievements (bullets or after "Key Achievements")
+    else if (line.startsWith('•') || line.startsWith('-')) {
+      currentAchievements.push(line);
+    }
+    // Regular description
+    else if (line.length > 10 && currentJob && !currentJob.description) {
+      currentJob.description = line;
+    }
+  }
+
+  // Add final job
+  if (currentJob) {
+    if (currentAchievements.length > 0) {
+      currentJob.achievements = currentAchievements;
+    }
+    jobs.push(currentJob);
+  }
+
+  return jobs;
+}
+
+function parseSkillsSection(lines: string[]): any[] {
+  const skillGroups = [];
+  let currentGroup = null;
+
+  for (const line of lines) {
+    if (line.includes(':')) {
+      // Save previous group
+      if (currentGroup) {
+        skillGroups.push(currentGroup);
+      }
+
+      // Start new group
+      const [category, skillsText] = line.split(':');
+      currentGroup = {
+        type: "skill-group",
+        category: category.trim(),
+        skills: skillsText ? skillsText.split('•').map(s => s.trim()).filter(s => s) : []
+      };
+    } else if (currentGroup && line.includes('•')) {
+      const skills = line.split('•').map(s => s.trim()).filter(s => s);
+      currentGroup.skills.push(...skills);
+    }
+  }
+
+  // Add final group
+  if (currentGroup) {
+    skillGroups.push(currentGroup);
+  }
+
+  // If no structured groups found, create a general skills group
+  if (skillGroups.length === 0 && lines.length > 0) {
+    const allSkills = lines.join(' ').split(/[•,]/).map(s => s.trim()).filter(s => s);
+    skillGroups.push({
+      type: "skill-group",
+      category: "Technical Skills",
+      skills: allSkills
+    });
+  }
+
+  return skillGroups;
+}
+
+function parseEducationSection(lines: string[]): any[] {
+  const education = [];
+  let currentEdu = null;
+
+  for (const line of lines) {
+    // Degree pattern
+    if (line.includes(' in ') || line.includes('Bachelor') || line.includes('Master') || line.includes('PhD')) {
+      if (currentEdu) education.push(currentEdu);
+
+      currentEdu = {
+        type: "education",
+        degree: line.split(' in ')[0]?.trim() || line,
+        field: line.split(' in ')[1]?.trim() || ""
+      };
+    }
+    // Institution (contains | usually)
+    else if (line.includes('|') && currentEdu) {
+      const parts = line.split('|').map(p => p.trim());
+      currentEdu.institution = parts[0];
+      if (parts[1]) currentEdu.location = parts[1];
+    }
+    // Dates
+    else if ((/\d{4}/.test(line) || line.includes('Present')) && currentEdu) {
+      currentEdu.dates = line;
+    }
+    // GPA
+    else if (line.includes('GPA') && currentEdu) {
+      currentEdu.gpa = line.replace('GPA:', '').trim();
+    }
+  }
+
+  if (currentEdu) education.push(currentEdu);
+
+  return education;
 }
 
 function createCoverLetterDocument(content: string, profile?: any): Document {
