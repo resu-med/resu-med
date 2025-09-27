@@ -196,12 +196,11 @@ export default function ResumeUpload() {
 
       setUploadStatus({ type: 'success', message });
 
-      // Store parsed data and show health check after successful import
+      // Store parsed data for potential future use
+      // Note: Health check is now handled by InlineProgressCard, not modal
       if (sections.length > 0) {
         setParsedData(parsedData);
-        setTimeout(() => {
-          setShowHealthCheck(true);
-        }, 1000); // Small delay to let user see success message
+        // Removed automatic modal popup - using inline progress card instead
       }
     } catch (error) {
       console.error('Error parsing resume:', error);

@@ -13,6 +13,10 @@ import SkillsForm from '@/components/forms/SkillsForm';
 import InterestsForm from '@/components/forms/InterestsForm';
 import ResumeUpload from '@/components/forms/ResumeUpload';
 import { calculateProfileCompleteness } from '@/lib/profileCompleteness';
+import InlineProgressCard from '@/components/InlineProgressCard';
+import QuickActionModals from '@/components/QuickActionModals';
+import FloatingAssistant from '@/components/FloatingAssistant';
+import ProgressBreadcrumbs from '@/components/ProgressBreadcrumbs';
 type ProfileSection = 'upload' | 'personal' | 'experience' | 'education' | 'skills' | 'interests';
 
 type SectionConfig = {
@@ -26,6 +30,7 @@ function ProfilePageContent() {
   const [activeSection, setActiveSection] = useState<ProfileSection>('upload');
   const { state, dispatch } = useProfile();
   const { state: authState, logout } = useAuth();
+  const [activeQuickAction, setActiveQuickAction] = useState<string | null>(null);
 
   // Calculate profile completeness
   const completeness = calculateProfileCompleteness(state.profile);
@@ -69,6 +74,10 @@ function ProfilePageContent() {
     setActiveSection(sectionId as ProfileSection);
   };
 
+  const handleQuickAction = (action: string) => {
+    setActiveQuickAction(action);
+  };
+
   const renderSection = () => {
     switch (activeSection) {
       case 'upload':
@@ -93,6 +102,11 @@ function ProfilePageContent() {
       {/* Navigation Header */}
       <div className="sticky top-0 z-50">
         <ResponsiveNavigation currentPage="profile" />
+        <ProgressBreadcrumbs
+          profile={state.profile}
+          currentSection={activeSection}
+          onNavigateToSection={handleNavigateToSection}
+        />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -118,77 +132,12 @@ function ProfilePageContent() {
           </p>
         </div>
 
-        {/* Dynamic Progress Banner */}
-        <div className={`p-4 rounded-lg border ${
-          completeness.overall.percentage >= 85 ? 'bg-green-50 border-green-200' :
-          completeness.overall.percentage >= 75 ? 'bg-blue-50 border-blue-200' :
-          completeness.overall.percentage >= 50 ? 'bg-yellow-50 border-yellow-200' :
-          'bg-red-50 border-red-200'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="text-2xl">
-                {completeness.overall.percentage >= 85 ? '🏆' :
-                 completeness.overall.percentage >= 75 ? '✅' :
-                 completeness.overall.percentage >= 50 ? '⚠️' : '❌'}
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">
-                  Profile Strength: {completeness.overall.percentage}%
-                </h3>
-                <p className={`text-sm ${
-                  completeness.overall.percentage >= 85 ? 'text-green-700' :
-                  completeness.overall.percentage >= 75 ? 'text-blue-700' :
-                  completeness.overall.percentage >= 50 ? 'text-yellow-700' :
-                  'text-red-700'
-                }`}>
-                  {completeness.overall.percentage >= 85 ? 'Outstanding! Ready for premium features.' :
-                   completeness.overall.percentage >= 75 ? 'Great! Ready for job searching.' :
-                   completeness.overall.percentage >= 50 ? 'Good progress! Complete a few more sections.' :
-                   'Profile needs attention to unlock features.'}
-                </p>
-              </div>
-            </div>
-            <div className="flex space-x-2">
-              {completeness.readyForJobs ? (
-                <Link
-                  href="/job-search"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                >
-                  🔍 Search Jobs
-                </Link>
-              ) : null}
-              {completeness.readyForTemplates ? (
-                <Link
-                  href="/templates"
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                >
-                  📄 Generate Resume
-                </Link>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full transition-all duration-500 ${
-                completeness.overall.percentage >= 85 ? 'bg-green-500' :
-                completeness.overall.percentage >= 75 ? 'bg-blue-500' :
-                completeness.overall.percentage >= 50 ? 'bg-yellow-500' :
-                'bg-red-500'
-              }`}
-              style={{ width: `${completeness.overall.percentage}%` }}
-            ></div>
-          </div>
-
-          {/* Next Steps */}
-          {completeness.nextSteps.length > 0 && completeness.overall.percentage < 85 && (
-            <div className="mt-3 text-sm">
-              <strong>Next steps:</strong> {completeness.nextSteps.slice(0, 2).join(', ')}
-            </div>
-          )}
-        </div>
+        {/* Inline Progress Card */}
+        <InlineProgressCard
+          profile={state.profile}
+          onNavigateToSection={handleNavigateToSection}
+          onQuickAction={handleQuickAction}
+        />
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Enhanced Navigation Sidebar */}
@@ -307,6 +256,20 @@ function ProfilePageContent() {
             </div>
           </div>
         </div>
+
+        {/* Floating Assistant */}
+        <FloatingAssistant
+          profile={state.profile}
+          currentSection={activeSection}
+          onNavigateToSection={handleNavigateToSection}
+          onQuickAction={handleQuickAction}
+        />
+
+        {/* Quick Action Modals */}
+        <QuickActionModals
+          activeAction={activeQuickAction}
+          onClose={() => setActiveQuickAction(null)}
+        />
       </div>
     </div>
   );
