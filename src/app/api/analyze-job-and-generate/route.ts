@@ -152,7 +152,7 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
       const dateB = new Date(b.startDate || '1900-01-01');
       return dateB.getTime() - dateA.getTime();
     }).map(exp => `
-    Position: ${exp.position}
+    Position: ${exp.jobTitle || exp.position || 'Job Title'}
     Company: ${exp.company}
     Location: ${exp.location}
     Duration: ${exp.startDate} - ${exp.current ? 'Present' : exp.endDate || 'End Date'}
@@ -487,7 +487,7 @@ function generateTailoredResume(profile: UserProfile, jobTitle: string, companyN
     const endDate = exp.current ? 'Present' : (exp.endDate || 'End Date');
 
     // Remove markdown formatting - use plain text
-    return `${exp.position || 'Position'}
+    return `${exp.jobTitle || exp.position || 'Position'}
 ${exp.company || 'Company'} | ${exp.location || 'Location'}
 ${startDate} - ${endDate}
 
@@ -576,9 +576,9 @@ function generateTailoredCoverLetter(profile: UserProfile, jobTitle: string, com
 
   return `Dear ${companyName} Hiring Team,
 
-I am writing to express my strong interest in the ${jobTitle} position at ${companyName}. With my background in ${topExperience ? topExperience.position : 'professional development'} and proven expertise in ${analysis.requiredSkills.slice(0, 3).join(', ')}, I am excited about the opportunity to contribute to your team's success.
+I am writing to express my strong interest in the ${jobTitle} position at ${companyName}. With my background in ${topExperience ? (topExperience.jobTitle || topExperience.position || 'professional development') : 'professional development'} and proven expertise in ${analysis.requiredSkills.slice(0, 3).join(', ')}, I am excited about the opportunity to contribute to your team's success.
 
-In my ${topExperience ? `role as ${topExperience.position} at ${topExperience.company}` : 'professional experience'}, I have developed strong capabilities that directly align with your requirements. ${topExperience ? topExperience.description : 'I have consistently delivered high-quality results and contributed to team objectives.'} This experience has prepared me to excel in the ${jobTitle} role, particularly in areas such as ${analysis.keyRequirements.slice(0, 2).join(' and ')}.
+In my ${topExperience ? `role as ${topExperience.jobTitle || topExperience.position || 'professional'} at ${topExperience.company}` : 'professional experience'}, I have developed strong capabilities that directly align with your requirements. ${topExperience ? topExperience.description : 'I have consistently delivered high-quality results and contributed to team objectives.'} This experience has prepared me to excel in the ${jobTitle} role, particularly in areas such as ${analysis.keyRequirements.slice(0, 2).join(' and ')}.
 
 What particularly excites me about this opportunity at ${companyName} is the chance to apply my skills in ${analysis.requiredSkills.slice(0, 2).join(' and ')} while contributing to your organization's growth and innovation. I am confident that my proven track record of ${topExperience && topExperience.achievements && topExperience.achievements.length > 0
   ? topExperience.achievements[0].toLowerCase()
@@ -594,5 +594,5 @@ function getRoleSummary(jobTitle: string, experience: any[], analysis: JobAnalys
   const yearsExp = experience.length;
   const topRole = experience[0];
 
-  return `Results-driven ${analysis.roleLevel}-level professional with ${yearsExp > 0 ? `${yearsExp}+` : 'relevant'} years of experience in ${analysis.industryType.toLowerCase()} and related fields. ${topRole ? `Currently serving as ${topRole.position} with expertise in ${analysis.requiredSkills.slice(0, 3).join(', ')}.` : `Skilled in ${analysis.requiredSkills.slice(0, 3).join(', ')}.`} Proven track record of delivering exceptional results and driving organizational success. Seeking to leverage comprehensive skill set and passion for innovation in the ${jobTitle} role.`;
+  return `Results-driven ${analysis.roleLevel}-level professional with ${yearsExp > 0 ? `${yearsExp}+` : 'relevant'} years of experience in ${analysis.industryType.toLowerCase()} and related fields. ${topRole ? `Currently serving as ${topRole.jobTitle || topRole.position || 'professional'} with expertise in ${analysis.requiredSkills.slice(0, 3).join(', ')}.` : `Skilled in ${analysis.requiredSkills.slice(0, 3).join(', ')}.`} Proven track record of delivering exceptional results and driving organizational success. Seeking to leverage comprehensive skill set and passion for innovation in the ${jobTitle} role.`;
 }
