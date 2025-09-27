@@ -10,7 +10,7 @@ interface ResponsiveNavigationProps {
 }
 
 export default function ResponsiveNavigation({ currentPage }: ResponsiveNavigationProps) {
-  const { state: authState } = useAuth();
+  const { state: authState, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
@@ -161,7 +161,13 @@ export default function ResponsiveNavigation({ currentPage }: ResponsiveNavigati
                       <Link href="/account/billing" className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-teal-600 hover:bg-teal-50" onClick={closeMobileMenu}>
                         Billing
                       </Link>
-                      <button className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:text-red-700 hover:bg-red-50">
+                      <button
+                        onClick={() => {
+                          closeMobileMenu();
+                          logout();
+                        }}
+                        className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
                         Sign Out
                       </button>
                     </div>
