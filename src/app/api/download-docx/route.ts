@@ -679,8 +679,7 @@ function parseExperienceSection(lines: string[]): any[] {
 
     // Enhanced job title detection
     const isJobTitle = (
-      // Standalone line that doesn't contain common non-title patterns
-      !line.includes('|') &&
+      // Exclude obvious non-title patterns
       !line.includes('•') &&
       !line.includes('-') &&
       !/^\d{4}/.test(line) &&
@@ -689,9 +688,11 @@ function parseExperienceSection(lines: string[]): any[] {
       !line.toLowerCase().includes('achievements:') &&
       line.length > 3 &&
       line.length < 150 &&
-      // Either next line contains company info OR this looks like a title
+      // Check if this looks like a job title
       (
-        (nextLine && (nextLine.includes('|') || /^\d{4}/.test(nextLine))) ||
+        // Next line contains company info (company | location pattern)
+        (nextLine && nextLine.includes('|') && !nextLine.toLowerCase().includes('director') && !nextLine.toLowerCase().includes('manager') && !nextLine.toLowerCase().includes('lead')) ||
+        // Or this line contains job title keywords
         line.toLowerCase().includes('manager') ||
         line.toLowerCase().includes('director') ||
         line.toLowerCase().includes('lead') ||
@@ -702,8 +703,13 @@ function parseExperienceSection(lines: string[]): any[] {
         line.toLowerCase().includes('owner') ||
         line.toLowerCase().includes('head') ||
         line.toLowerCase().includes('senior') ||
-        line.toLowerCase().includes('junior')
-      )
+        line.toLowerCase().includes('junior') ||
+        line.toLowerCase().includes('consultant') ||
+        line.toLowerCase().includes('developer') ||
+        line.toLowerCase().includes('architect')
+      ) &&
+      // Make sure it's not a company line (company | location pattern without title keywords)
+      !(line.includes('|') && !line.toLowerCase().includes('manager') && !line.toLowerCase().includes('director') && !line.toLowerCase().includes('lead') && !line.toLowerCase().includes('senior'))
     );
 
     if (isJobTitle) {
@@ -727,8 +733,12 @@ function parseExperienceSection(lines: string[]): any[] {
       currentAchievements = [];
       expectingCompanyNext = true;
     }
-    // Company and location (contains | or is next after job title)
-    else if (line.includes('|') && currentJob) {
+    // Company and location (contains | and doesn't look like a job title)
+    else if (line.includes('|') && currentJob &&
+             !line.toLowerCase().includes('manager') &&
+             !line.toLowerCase().includes('director') &&
+             !line.toLowerCase().includes('lead') &&
+             !line.toLowerCase().includes('senior')) {
       const parts = line.split('|').map(p => p.trim());
       currentJob.company = parts[0];
       if (parts[1]) currentJob.location = parts[1];
