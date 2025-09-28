@@ -6,6 +6,7 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { useAuth } from '@/contexts/AuthContext';
 import RouteGuard from '@/components/RouteGuard';
 import ResponsiveNavigation from '@/components/ResponsiveNavigation';
+import ClinicalTreatmentPlan from '@/components/ClinicalTreatmentPlan';
 
 interface JobAnalysis {
   keyRequirements: string[];
@@ -277,6 +278,9 @@ function TemplatesPageContent() {
       <div className="sticky top-0 z-50">
         <ResponsiveNavigation currentPage="templates" />
       </div>
+
+      {/* Clinical Treatment Plan */}
+      <ClinicalTreatmentPlan profile={state.profile} currentStep="recovery" />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

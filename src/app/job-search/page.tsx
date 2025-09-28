@@ -5,8 +5,10 @@ import JobSearchForm from '@/components/forms/JobSearchForm';
 import { JobListing, JobSearchFilters } from '@/types/profile';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import RouteGuard from '@/components/RouteGuard';
 import ResponsiveNavigation from '@/components/ResponsiveNavigation';
+import ClinicalTreatmentPlan from '@/components/ClinicalTreatmentPlan';
 
 // Local storage keys
 const STORAGE_KEYS = {
@@ -22,6 +24,7 @@ const CACHE_DURATION = 30 * 60 * 1000;
 function JobSearchPageContent() {
   const { canPerformAction, incrementUsage, getRemainingUsage, getCurrentPlan } = useSubscription();
   const { state: authState, logout } = useAuth();
+  const { state: profileState } = useProfile();
   const [jobResults, setJobResults] = useState<JobListing[]>([]);
   const [jobSearchLoading, setJobSearchLoading] = useState(false);
   const [activeSources, setActiveSources] = useState<string[]>([]);
@@ -228,6 +231,9 @@ function JobSearchPageContent() {
       <div className="sticky top-0 z-50">
         <ResponsiveNavigation currentPage="job-search" />
       </div>
+
+      {/* Clinical Treatment Plan */}
+      <ClinicalTreatmentPlan profile={profileState.profile} currentStep="treatment" />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
