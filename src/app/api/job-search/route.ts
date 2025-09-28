@@ -104,7 +104,10 @@ export async function POST(request: NextRequest) {
 
     // Remove duplicates and sort by relevance
     const uniqueJobs = removeDuplicateJobs(allJobs);
-    const sortedJobs = sortJobsByRelevance(uniqueJobs, keywords);
+
+    // Apply geographic filtering to prevent showing irrelevant locations
+    const geographicallyFilteredJobs = applyGeographicFiltering(uniqueJobs, filters.location, filters.remote);
+    const sortedJobs = sortJobsByRelevance(geographicallyFilteredJobs, keywords);
 
     console.log(`✅ Found ${sortedJobs.length} unique job listings from multiple sources`);
 
@@ -551,35 +554,67 @@ async function searchIndeedJobs(filters: JobSearchFilters): Promise<JobListing[]
   try {
     console.log('💼 Searching Indeed jobs...');
 
-    // Use Indeed's RSS feed which is publicly available
+    // Try multiple Indeed domains based on location
     const searchLocation = filters.remote ? 'remote' : (filters.location || 'UK');
-    const rssUrl = new URL('https://www.indeed.co.uk/rss');
+    let indeedDomain = 'indeed.co.uk';
+
+    // Determine appropriate Indeed domain based on location
+    if (filters.location) {
+      const location = filters.location.toLowerCase();
+      if (location.includes('usa') || location.includes('united states') || location.includes('america')) {
+        indeedDomain = 'indeed.com';
+      } else if (location.includes('canada')) {
+        indeedDomain = 'indeed.ca';
+      } else if (location.includes('australia')) {
+        indeedDomain = 'indeed.com.au';
+      }
+    }
+
+    const rssUrl = new URL(`https://www.${indeedDomain}/rss`);
     rssUrl.searchParams.set('q', filters.keywords);
     rssUrl.searchParams.set('l', searchLocation);
-    rssUrl.searchParams.set('limit', '15');
+    rssUrl.searchParams.set('limit', '25');
     rssUrl.searchParams.set('radius', '25');
+    rssUrl.searchParams.set('sort', 'date'); // Get most recent jobs first
 
     console.log('🔗 Indeed RSS URL:', rssUrl.toString());
 
     const response = await fetch(rssUrl.toString(), {
       headers: {
-        'User-Agent': 'ResuMed Job Search Bot 1.0',
-        'Accept': 'application/rss+xml, application/xml, text/xml'
+        'User-Agent': 'Mozilla/5.0 (compatible; ResuMed/1.0; +https://resumed.com)',
+        'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache'
       },
-      signal: AbortSignal.timeout(15000)
+      signal: AbortSignal.timeout(20000)
     });
 
     if (!response.ok) {
+      console.warn(`Indeed RSS failed with ${response.status}: ${response.statusText}`);
       throw new Error(`Indeed RSS error: ${response.status} ${response.statusText}`);
     }
 
     const rssText = await response.text();
+    console.log('📥 Indeed RSS response length:', rssText.length);
 
-    // Parse XML manually (simple RSS parsing)
+    // Check if we got actual RSS content
+    if (!rssText.includes('<rss') && !rssText.includes('<feed')) {
+      console.warn('⚠️ Indeed RSS response doesn\'t appear to be valid RSS/XML');
+      console.log('📄 Response preview:', rssText.substring(0, 500));
+      throw new Error('Invalid RSS response from Indeed');
+    }
+
+    // Parse XML manually (improved RSS parsing)
     const items = parseIndeedRSS(rssText);
+    console.log(`📋 Parsed ${items.length} jobs from Indeed RSS`);
 
-    return items.slice(0, 10).map((item, index): JobListing => ({
-      id: `indeed-${item.guid || index}`,
+    if (items.length === 0) {
+      console.warn('⚠️ No jobs parsed from Indeed RSS, using fallback');
+      return generateIndeedFallbackJobs(filters);
+    }
+
+    return items.slice(0, 12).map((item, index): JobListing => ({
+      id: `indeed-${item.guid || Date.now()}-${index}`,
       title: item.title || 'Job Title Not Available',
       company: item.company || 'Company Not Specified',
       location: item.location || searchLocation,
@@ -588,7 +623,7 @@ async function searchIndeedJobs(filters: JobSearchFilters): Promise<JobListing[]
       type: mapJobType(item.title) || 'full-time',
       experienceLevel: mapExperienceLevel(item.title, item.description) || 'mid',
       datePosted: item.pubDate || new Date().toISOString(),
-      url: item.link || `https://www.indeed.co.uk/jobs?q=${encodeURIComponent(filters.keywords)}`,
+      url: item.link || `https://www.${indeedDomain}/jobs?q=${encodeURIComponent(item.title || filters.keywords)}&l=${encodeURIComponent(filters.location || 'UK')}`,
       source: 'Indeed',
       skills: extractSkills(item.description || '', item.title || ''),
       saved: false,
@@ -597,71 +632,206 @@ async function searchIndeedJobs(filters: JobSearchFilters): Promise<JobListing[]
 
   } catch (error) {
     console.error('Indeed search failed:', error);
+    console.log('🔄 Falling back to Indeed-style sample jobs');
 
     // Fallback: Generate realistic Indeed-style jobs
     return generateIndeedFallbackJobs(filters);
   }
 }
 
-// Simple RSS parser for Indeed
+// Improved RSS parser for Indeed
 function parseIndeedRSS(rssText: string): any[] {
   const items: any[] = [];
 
   try {
-    // Extract items using regex (simple approach)
-    const itemRegex = /<item>(.*?)<\/item>/gs;
-    const matches = rssText.match(itemRegex);
+    console.log('🔍 Parsing Indeed RSS feed...');
 
-    if (matches) {
-      for (const match of matches.slice(0, 15)) {
-        const item: any = {};
+    // Try to extract items using multiple patterns
+    const itemPatterns = [
+      /<item>(.*?)<\/item>/gs,
+      /<entry>(.*?)<\/entry>/gs, // For Atom feeds
+    ];
 
-        // Extract title
-        const titleMatch = match.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/);
-        if (titleMatch) {
-          const fullTitle = titleMatch[1];
-          // Indeed format: "Job Title - Company Name"
-          const parts = fullTitle.split(' - ');
-          item.title = parts[0]?.trim() || fullTitle;
-          item.company = parts[1]?.trim() || 'Company Not Specified';
-        }
-
-        // Extract link
-        const linkMatch = match.match(/<link>(.*?)<\/link>/);
-        if (linkMatch) {
-          item.link = linkMatch[1];
-          // Extract job ID from URL for GUID
-          const jobIdMatch = item.link.match(/jk=([^&]+)/);
-          item.guid = jobIdMatch ? jobIdMatch[1] : undefined;
-        }
-
-        // Extract description
-        const descMatch = match.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/s);
-        if (descMatch) {
-          item.description = descMatch[1];
-
-          // Extract location from description
-          const locationMatch = item.description.match(/Location:\s*([^<\n]+)/);
-          if (locationMatch) {
-            item.location = locationMatch[1].trim();
-          }
-
-          // Look for salary information
-          const salaryMatch = item.description.match(/£[\d,]+ - £[\d,]+|£[\d,]+\+|£[\d,]+/);
-          if (salaryMatch) {
-            item.salary = salaryMatch[0];
-          }
-        }
-
-        // Extract pub date
-        const pubDateMatch = match.match(/<pubDate>(.*?)<\/pubDate>/);
-        if (pubDateMatch) {
-          item.pubDate = new Date(pubDateMatch[1]).toISOString();
-        }
-
-        items.push(item);
+    let matches: RegExpMatchArray | null = null;
+    for (const pattern of itemPatterns) {
+      matches = rssText.match(pattern);
+      if (matches && matches.length > 0) {
+        console.log(`✅ Found ${matches.length} items using pattern`);
+        break;
       }
     }
+
+    if (!matches) {
+      console.warn('⚠️ No items found in RSS feed');
+      return items;
+    }
+
+    for (const match of matches.slice(0, 20)) {
+      const item: any = {};
+
+      // Extract title with multiple patterns
+      let titleMatch = match.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/s);
+      if (!titleMatch) {
+        titleMatch = match.match(/<title>(.*?)<\/title>/s);
+      }
+
+      if (titleMatch) {
+        const fullTitle = titleMatch[1].trim();
+        console.log(`📝 Processing title: "${fullTitle}"`);
+
+        // Indeed format variations:
+        // "Job Title - Company Name"
+        // "Job Title at Company Name"
+        // "Job Title | Company Name"
+        const separators = [' - ', ' at ', ' | ', ' • '];
+        let parts: string[] = [fullTitle];
+
+        for (const separator of separators) {
+          if (fullTitle.includes(separator)) {
+            parts = fullTitle.split(separator);
+            break;
+          }
+        }
+
+        item.title = parts[0]?.trim() || fullTitle;
+        item.company = parts[1]?.trim() || 'Company Not Specified';
+      }
+
+      // Extract link with multiple patterns
+      let linkMatch = match.match(/<link><!\[CDATA\[(.*?)\]\]><\/link>/);
+      if (!linkMatch) {
+        linkMatch = match.match(/<link>(.*?)<\/link>/);
+      }
+      if (!linkMatch) {
+        linkMatch = match.match(/<guid.*?>(.*?)<\/guid>/);
+      }
+
+      if (linkMatch) {
+        let originalLink = linkMatch[1].trim();
+
+        // Clean up the link and ensure it's a valid Indeed URL
+        if (originalLink) {
+          // Remove any tracking parameters that might break the link
+          originalLink = originalLink.replace(/&utm_[^&]*/g, '');
+          originalLink = originalLink.replace(/\?utm_[^&]*/g, '?');
+          originalLink = originalLink.replace(/\?&/, '?');
+          originalLink = originalLink.replace(/\?$/, '');
+
+          // Ensure it's a proper Indeed URL
+          if (originalLink.includes('indeed.') && (originalLink.includes('/viewjob') || originalLink.includes('/jobs/'))) {
+            item.link = originalLink;
+          } else {
+            // If we don't have a valid direct link, create a search link
+            const searchTerms = encodeURIComponent(item.title || filters.keywords);
+            const location = encodeURIComponent(filters.location || 'UK');
+            item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}&l=${location}`;
+          }
+
+          // Extract job ID from URL for GUID
+          const jobIdMatch = originalLink.match(/jk=([^&]+)/);
+          item.guid = jobIdMatch ? jobIdMatch[1] : `indeed-${Date.now()}-${Math.random()}`;
+        } else {
+          // Fallback: create a search link
+          const searchTerms = encodeURIComponent(item.title || filters.keywords);
+          const location = encodeURIComponent(filters.location || 'UK');
+          item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}&l=${location}`;
+          item.guid = `indeed-fallback-${Date.now()}-${Math.random()}`;
+        }
+      }
+
+      // Extract description with multiple patterns
+      let descMatch = match.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/s);
+      if (!descMatch) {
+        descMatch = match.match(/<description>(.*?)<\/description>/s);
+      }
+      if (!descMatch) {
+        descMatch = match.match(/<summary><!\[CDATA\[(.*?)\]\]><\/summary>/s);
+      }
+      if (!descMatch) {
+        descMatch = match.match(/<summary>(.*?)<\/summary>/s);
+      }
+
+      if (descMatch) {
+        item.description = descMatch[1];
+
+        // Extract location from description with multiple patterns
+        const locationPatterns = [
+          /Location:\s*([^<\n\r]+)/i,
+          /Located in:?\s*([^<\n\r]+)/i,
+          /Address:?\s*([^<\n\r]+)/i,
+          /<b>Location:<\/b>\s*([^<\n\r]+)/i,
+          /in\s+([A-Za-z\s,]+(?:,\s*[A-Za-z]{2,})?)\s*<br/i
+        ];
+
+        for (const pattern of locationPatterns) {
+          const locationMatch = item.description.match(pattern);
+          if (locationMatch) {
+            item.location = locationMatch[1].trim().replace(/,$/, '');
+            break;
+          }
+        }
+
+        // Look for salary information with multiple patterns
+        const salaryPatterns = [
+          /£[\d,]+ - £[\d,]+/g,
+          /£[\d,]+\+/g,
+          /£[\d,]+/g,
+          /\$[\d,]+ - \$[\d,]+/g,
+          /\$[\d,]+\+/g,
+          /\$[\d,]+/g,
+          /Salary:\s*([£$][\d,]+(?:\s*-\s*[£$][\d,]+)?)/i
+        ];
+
+        for (const pattern of salaryPatterns) {
+          const salaryMatch = item.description.match(pattern);
+          if (salaryMatch) {
+            item.salary = salaryMatch[0];
+            break;
+          }
+        }
+      }
+
+      // Extract pub date with multiple patterns
+      let pubDateMatch = match.match(/<pubDate>(.*?)<\/pubDate>/);
+      if (!pubDateMatch) {
+        pubDateMatch = match.match(/<published>(.*?)<\/published>/);
+      }
+      if (!pubDateMatch) {
+        pubDateMatch = match.match(/<updated>(.*?)<\/updated>/);
+      }
+
+      if (pubDateMatch) {
+        try {
+          item.pubDate = new Date(pubDateMatch[1]).toISOString();
+        } catch (e) {
+          console.warn('⚠️ Could not parse date:', pubDateMatch[1]);
+          item.pubDate = new Date().toISOString();
+        }
+      } else {
+        item.pubDate = new Date().toISOString();
+      }
+
+      // Ensure we have a working link
+      if (!item.link) {
+        const searchTerms = encodeURIComponent(item.title || 'jobs');
+        const company = item.company && item.company !== 'Company Not Specified' ? encodeURIComponent(item.company) : '';
+        const location = encodeURIComponent(item.location || 'UK');
+
+        if (company) {
+          item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}+${company}&l=${location}`;
+        } else {
+          item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}&l=${location}`;
+        }
+      }
+
+      // Only add items that have at least a title
+      if (item.title && item.title !== 'Job Title Not Available') {
+        items.push(item);
+        console.log(`✅ Added job: "${item.title}" at "${item.company}" - Link: ${item.link}`);
+      }
+    }
+
+    console.log(`📊 Successfully parsed ${items.length} jobs from Indeed RSS`);
   } catch (error) {
     console.error('RSS parsing error:', error);
   }
@@ -696,6 +866,112 @@ function generateIndeedFallbackJobs(filters: JobSearchFilters): JobListing[] {
   }
 
   return jobs;
+}
+
+// Geographic filtering to prevent showing irrelevant locations
+function applyGeographicFiltering(jobs: JobListing[], searchLocation: string, isRemote: boolean): JobListing[] {
+  if (isRemote) {
+    console.log('🌐 Remote jobs requested - allowing all remote positions');
+    return jobs.filter(job =>
+      job.type === 'remote' ||
+      job.location.toLowerCase().includes('remote') ||
+      job.location.toLowerCase().includes('anywhere') ||
+      job.location.toLowerCase().includes('worldwide')
+    );
+  }
+
+  if (!searchLocation) {
+    console.log('📍 No specific location provided - using default filtering');
+    return jobs;
+  }
+
+  const location = searchLocation.toLowerCase();
+  console.log(`🎯 Applying geographic filtering for location: "${location}"`);
+
+  // Define geographic regions and their variations
+  const geographicRegions = {
+    uk: {
+      keywords: ['uk', 'united kingdom', 'britain', 'great britain', 'england', 'scotland', 'wales', 'northern ireland'],
+      cities: ['london', 'manchester', 'birmingham', 'leeds', 'glasgow', 'liverpool', 'bristol', 'sheffield', 'leicester', 'coventry', 'bradford', 'cardiff', 'belfast', 'newcastle', 'nottingham', 'plymouth', 'stoke', 'wolverhampton', 'derby', 'swansea', 'southampton', 'salford', 'aberdeen', 'westminster', 'reading', 'luton', 'york', 'stockport', 'brighton', 'norwich', 'rotherham']
+    },
+    us: {
+      keywords: ['usa', 'united states', 'america', 'us'],
+      cities: ['new york', 'los angeles', 'chicago', 'houston', 'phoenix', 'philadelphia', 'san antonio', 'san diego', 'dallas', 'san jose', 'austin', 'jacksonville', 'san francisco', 'columbus', 'fort worth', 'indianapolis', 'charlotte', 'seattle', 'denver', 'boston', 'nashville', 'oklahoma city', 'las vegas', 'detroit', 'memphis', 'portland', 'louisville', 'baltimore', 'milwaukee', 'albuquerque', 'fresno', 'arizona', 'california', 'florida', 'texas', 'new jersey', 'pennsylvania']
+    },
+    canada: {
+      keywords: ['canada', 'canadian'],
+      cities: ['toronto', 'montreal', 'vancouver', 'calgary', 'ottawa', 'edmonton', 'quebec city', 'winnipeg', 'hamilton', 'kitchener', 'halifax', 'ontario', 'british columbia', 'alberta', 'quebec']
+    },
+    australia: {
+      keywords: ['australia', 'australian'],
+      cities: ['sydney', 'melbourne', 'brisbane', 'perth', 'adelaide', 'gold coast', 'newcastle', 'canberra', 'sunshine coast', 'wollongong', 'hobart', 'geelong', 'townsville', 'cairns', 'darwin', 'toowoomba', 'ballarat', 'bendigo', 'launceston']
+    }
+  };
+
+  // Determine which region the user is searching for
+  let targetRegion: string | null = null;
+  for (const [region, data] of Object.entries(geographicRegions)) {
+    if (data.keywords.some(keyword => location.includes(keyword)) ||
+        data.cities.some(city => location.includes(city))) {
+      targetRegion = region;
+      break;
+    }
+  }
+
+  console.log(`🗺️ Detected target region: ${targetRegion || 'unknown'}`);
+
+  if (!targetRegion) {
+    console.log('⚠️ Could not determine geographic region, applying loose filtering');
+    // If we can't determine the region, just filter out obvious mismatches
+    return jobs.filter(job => {
+      const jobLocation = job.location.toLowerCase();
+      // Filter out jobs that are clearly from other major regions
+      const isUS = geographicRegions.us.keywords.some(k => jobLocation.includes(k)) ||
+                   geographicRegions.us.cities.some(c => jobLocation.includes(c));
+      const isAustralia = geographicRegions.australia.keywords.some(k => jobLocation.includes(k)) ||
+                         geographicRegions.australia.cities.some(c => jobLocation.includes(c));
+      const isCanada = geographicRegions.canada.keywords.some(k => jobLocation.includes(k)) ||
+                      geographicRegions.canada.cities.some(c => jobLocation.includes(c));
+
+      // If it's clearly from another major region, exclude it
+      return !(isUS || isAustralia || isCanada);
+    });
+  }
+
+  // Filter jobs to only include those from the target region
+  const filteredJobs = jobs.filter(job => {
+    const jobLocation = job.location.toLowerCase();
+    const targetData = geographicRegions[targetRegion as keyof typeof geographicRegions];
+
+    // Check if job location matches target region
+    const matchesRegion = targetData.keywords.some(keyword => jobLocation.includes(keyword)) ||
+                         targetData.cities.some(city => jobLocation.includes(city));
+
+    // Also allow remote jobs that don't specify a conflicting location
+    const isRemoteCompatible = jobLocation.includes('remote') ||
+                              jobLocation.includes('anywhere') ||
+                              jobLocation.includes('worldwide');
+
+    // Exclude jobs from other specific regions
+    const isFromOtherRegion = Object.entries(geographicRegions)
+      .filter(([region]) => region !== targetRegion)
+      .some(([, data]) =>
+        data.keywords.some(keyword => jobLocation.includes(keyword)) ||
+        data.cities.some(city => jobLocation.includes(city))
+      );
+
+    const shouldInclude = (matchesRegion || isRemoteCompatible) && !isFromOtherRegion;
+
+    if (!shouldInclude) {
+      console.log(`🚫 Filtering out job: "${job.title}" at "${job.location}" (doesn't match ${targetRegion})`);
+    }
+
+    return shouldInclude;
+  });
+
+  console.log(`📊 Geographic filtering: ${jobs.length} → ${filteredJobs.length} jobs (removed ${jobs.length - filteredJobs.length} irrelevant locations)`);
+
+  return filteredJobs;
 }
 
 // Utility Functions
