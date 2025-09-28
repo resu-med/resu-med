@@ -51,7 +51,7 @@ export default function JobSearchForm({
 
   // Provider selection for search
   const [selectedProviders, setSelectedProviders] = useState<string[]>([
-    'JSearch', 'Jooble', 'The Muse', 'RemoteOK', 'Reed', 'Adzuna'
+    'JSearch', 'Jooble', 'The Muse', 'RemoteOK', 'Reed', 'Adzuna', 'Arbeitnow'
   ]);
 
   // Load persisted search filters on mount
@@ -105,6 +105,8 @@ export default function JobSearchForm({
         return `${baseClasses} ${isSelected ? 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200' : 'bg-gray-100 text-gray-500 hover:bg-indigo-100'}`;
       case 'RemoteOK':
         return `${baseClasses} ${isSelected ? 'bg-pink-100 text-pink-800 hover:bg-pink-200' : 'bg-gray-100 text-gray-500 hover:bg-pink-100'}`;
+      case 'Arbeitnow':
+        return `${baseClasses} ${isSelected ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-500 hover:bg-purple-100'}`;
       default:
         return `${baseClasses} ${isSelected ? 'bg-gray-100 text-gray-800 hover:bg-gray-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`;
     }
@@ -141,7 +143,8 @@ export default function JobSearchForm({
               { name: 'The Muse', color: 'indigo' },
               { name: 'RemoteOK', color: 'pink' },
               { name: 'Reed', color: 'blue' },
-              { name: 'Adzuna', color: 'green' }
+              { name: 'Adzuna', color: 'green' },
+              { name: 'Arbeitnow', color: 'purple' }
             ].map((provider) => (
               <button
                 key={provider.name}

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Search multiple job APIs in parallel based on selected providers
     const searchPromises: Promise<JobListing[]>[] = [];
     const enabledProviders = selectedProviders && selectedProviders.length > 0 ? selectedProviders : [
-      'Reed', 'Adzuna', 'RemoteOK' // Focus on reliable APIs
+      'Reed', 'Adzuna', 'Arbeitnow', 'RemoteOK' // Focus on reliable APIs
     ];
 
     console.log('🔍 Enabled providers:', enabledProviders);
@@ -54,6 +54,12 @@ export async function POST(request: NextRequest) {
     if (enabledProviders.includes('Indeed')) {
       console.log('💼 Adding Indeed search');
       searchPromises.push(searchIndeedJobs(filters)); // Will use RSS/public method
+    }
+
+    // Arbeitnow API (European jobs) - No API key required
+    if (enabledProviders.includes('Arbeitnow')) {
+      console.log('🇪🇺 Adding Arbeitnow search');
+      searchPromises.push(searchArbeitnowJobs(filters)); // No API key required
     }
 
     // Additional APIs (optional)
@@ -353,6 +359,71 @@ async function searchMuseJobs(filters: JobSearchFilters): Promise<JobListing[]> 
 
   } catch (error) {
     console.error('The Muse API search failed:', error);
+    return [];
+  }
+}
+
+// Arbeitnow API Integration (European/Remote jobs)
+async function searchArbeitnowJobs(filters: JobSearchFilters): Promise<JobListing[]> {
+  try {
+    console.log('🇪🇺 Searching Arbeitnow API...');
+
+    const params = new URLSearchParams({
+      query: filters.keywords
+    });
+
+    // Add location if not remote (Arbeitnow focuses on European jobs)
+    if (!filters.remote && filters.location) {
+      params.append('location', filters.location);
+    }
+
+    // Add visa sponsorship parameter for non-EU searches
+    const searchLocation = filters.location?.toLowerCase() || '';
+    if (searchLocation.includes('uk') || searchLocation.includes('united kingdom') ||
+        searchLocation.includes('ireland') || searchLocation.includes('non-eu')) {
+      params.append('visa_sponsorship', 'true');
+    }
+
+    const response = await fetch(`https://www.arbeitnow.com/api/job-board-api?${params}`, {
+      headers: {
+        'User-Agent': 'ResuMed Job Search (https://resumed.com)',
+        'Accept': 'application/json'
+      },
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Arbeitnow API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.data || !Array.isArray(data.data)) {
+      console.log('🔍 Arbeitnow API returned no results');
+      return [];
+    }
+
+    console.log(`📋 Found ${data.data.length} jobs from Arbeitnow API`);
+
+    return data.data.slice(0, 15).map((job: any, index: number): JobListing => ({
+      id: `arbeitnow-${job.slug || index}`,
+      title: job.title || 'Job Title Not Available',
+      company: job.company_name || 'Company Not Specified',
+      location: job.location || 'Europe',
+      description: cleanDescription(job.description || 'No description available'),
+      salary: job.salary || undefined,
+      type: mapArbeitnowJobType(job.job_types) || 'full-time',
+      experienceLevel: mapExperienceLevel(job.title, job.description) || 'mid',
+      datePosted: job.created_at || new Date().toISOString(),
+      url: job.url || `https://www.arbeitnow.com/jobs/${job.slug}`,
+      source: 'Arbeitnow',
+      skills: job.tags || extractSkills(job.description || '', job.title || ''),
+      saved: false,
+      applied: false
+    }));
+
+  } catch (error) {
+    console.error('Arbeitnow API search failed:', error);
     return [];
   }
 }
@@ -1169,6 +1240,19 @@ function mapMuseExperienceLevel(level?: string): 'entry' | 'mid' | 'senior' | 'e
   if (l.includes('director') || l.includes('executive') || l.includes('vp') || l.includes('chief')) return 'executive';
 
   return 'mid';
+}
+
+// Arbeitnow-specific utility functions
+function mapArbeitnowJobType(jobTypes?: string[]): 'full-time' | 'part-time' | 'contract' | 'internship' | 'remote' {
+  if (!jobTypes || !Array.isArray(jobTypes)) return 'full-time';
+
+  const typeString = jobTypes.join(' ').toLowerCase();
+  if (typeString.includes('part') || typeString.includes('part-time')) return 'part-time';
+  if (typeString.includes('contract') || typeString.includes('freelance') || typeString.includes('temporary')) return 'contract';
+  if (typeString.includes('intern')) return 'internship';
+  if (typeString.includes('remote')) return 'remote';
+
+  return 'full-time';
 }
 
 // RemoteOK-specific utility functions
