@@ -24,7 +24,7 @@ export default function SimplifiedProfileLayout({
 
   const sections = [
     { id: 'upload', label: 'Import', icon: '📋' },
-    { id: 'personal', label: 'Details', icon: '👤' },
+    { id: 'personal', label: 'Details', icon: '🩺' },
     { id: 'experience', label: 'Work', icon: '💼' },
     { id: 'education', label: 'Education', icon: '🎓' },
     { id: 'skills', label: 'Skills', icon: '⚡' },
@@ -79,6 +79,94 @@ export default function SimplifiedProfileLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Clinical Treatment Plan Overview */}
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 text-white">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="text-center mb-4">
+            <h2 className="text-xl font-semibold mb-2">🩺 Your Career Health Treatment Plan</h2>
+            <p className="text-teal-100">Follow our proven 3-step clinical approach to career success</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Step 1: Diagnosis */}
+            <div className={`bg-white/10 backdrop-blur rounded-lg p-4 border-2 transition-all ${
+              completeness.overall.percentage < 75 ? 'border-white shadow-lg' : 'border-white/30'
+            }`}>
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-2xl">🔍</span>
+                <div>
+                  <h3 className="font-semibold">Step 1: Diagnosis</h3>
+                  <p className="text-sm text-teal-100">Build Complete Profile</p>
+                </div>
+              </div>
+              <div className="text-xs text-teal-100">
+                Upload resume, complete all sections, optimize your professional profile
+              </div>
+              {completeness.overall.percentage >= 75 && (
+                <div className="mt-2 flex items-center text-green-300">
+                  <span className="text-sm">✓ Diagnosis Complete</span>
+                </div>
+              )}
+            </div>
+
+            {/* Step 2: Treatment */}
+            <div className={`bg-white/10 backdrop-blur rounded-lg p-4 border-2 transition-all ${
+              completeness.overall.percentage >= 75 && completeness.overall.percentage < 100 ? 'border-white shadow-lg' : 'border-white/30'
+            }`}>
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-2xl">💼</span>
+                <div>
+                  <h3 className="font-semibold">Step 2: Treatment</h3>
+                  <p className="text-sm text-teal-100">Search & Apply for Jobs</p>
+                </div>
+              </div>
+              <div className="text-xs text-teal-100">
+                Smart job matching, targeted applications, track your progress
+              </div>
+              {completeness.overall.percentage < 75 && (
+                <div className="mt-2 text-yellow-300 text-xs">
+                  🔒 Unlocks at 75% profile completion
+                </div>
+              )}
+            </div>
+
+            {/* Step 3: Recovery */}
+            <div className={`bg-white/10 backdrop-blur rounded-lg p-4 border-2 transition-all ${
+              completeness.readyForTemplates ? 'border-white shadow-lg' : 'border-white/30'
+            }`}>
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-2xl">📋</span>
+                <div>
+                  <h3 className="font-semibold">Step 3: Recovery</h3>
+                  <p className="text-sm text-teal-100">Generate Tailored Documents</p>
+                </div>
+              </div>
+              <div className="text-xs text-teal-100">
+                Custom resumes, cover letters, optimized for each application
+              </div>
+              {!completeness.readyForTemplates && (
+                <div className="mt-2 text-yellow-300 text-xs">
+                  🔒 Unlocks at 85% profile completion
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="mt-4 text-center">
+            <div className="text-sm mb-2">
+              Overall Health Score: <span className="font-bold">{completeness.overall.percentage}%</span>
+            </div>
+            <div className="w-full bg-white/20 rounded-full h-3">
+              <div
+                className="bg-white h-3 rounded-full transition-all duration-500 shadow-sm"
+                style={{ width: `${completeness.overall.percentage}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Simplified Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4">
