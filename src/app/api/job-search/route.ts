@@ -709,33 +709,46 @@ function parseIndeedRSS(rssText: string): any[] {
       if (linkMatch) {
         let originalLink = linkMatch[1].trim();
 
-        // Clean up the link and ensure it's a valid Indeed URL
-        if (originalLink) {
-          // Remove any tracking parameters that might break the link
-          originalLink = originalLink.replace(/&utm_[^&]*/g, '');
-          originalLink = originalLink.replace(/\?utm_[^&]*/g, '?');
-          originalLink = originalLink.replace(/\?&/, '?');
-          originalLink = originalLink.replace(/\?$/, '');
+        // Log the original link for debugging
+        console.log('🔗 Original Indeed link:', originalLink);
 
-          // Ensure it's a proper Indeed URL
-          if (originalLink.includes('indeed.') && (originalLink.includes('/viewjob') || originalLink.includes('/jobs/'))) {
-            item.link = originalLink;
+        // Extract job ID if present in the URL
+        let jobId = null;
+        const jobIdPatterns = [
+          /jk=([a-f0-9]+)/i,
+          /jobs\/([a-f0-9]+)/i,
+          /viewjob\?jk=([a-f0-9]+)/i
+        ];
+
+        for (const pattern of jobIdPatterns) {
+          const match = originalLink.match(pattern);
+          if (match) {
+            jobId = match[1];
+            break;
+          }
+        }
+
+        if (jobId) {
+          // Create a direct job URL using the job ID
+          item.link = `https://www.indeed.co.uk/viewjob?jk=${jobId}`;
+          item.guid = jobId;
+          console.log('✅ Created direct job link:', item.link);
+        } else {
+          // No job ID found - Indeed RSS might be giving us search URLs
+          // Create a more specific search that's likely to show the job
+          const searchTerms = encodeURIComponent(`"${item.title || filters.keywords}"`);
+          const company = item.company && item.company !== 'Company Not Specified' ?
+                         encodeURIComponent(`"${item.company}"`) : '';
+          const location = encodeURIComponent(filters.location || 'UK');
+
+          if (company) {
+            item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}+${company}&l=${location}&sort=date`;
           } else {
-            // If we don't have a valid direct link, create a search link
-            const searchTerms = encodeURIComponent(item.title || filters.keywords);
-            const location = encodeURIComponent(filters.location || 'UK');
-            item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}&l=${location}`;
+            item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}&l=${location}&sort=date`;
           }
 
-          // Extract job ID from URL for GUID
-          const jobIdMatch = originalLink.match(/jk=([^&]+)/);
-          item.guid = jobIdMatch ? jobIdMatch[1] : `indeed-${Date.now()}-${Math.random()}`;
-        } else {
-          // Fallback: create a search link
-          const searchTerms = encodeURIComponent(item.title || filters.keywords);
-          const location = encodeURIComponent(filters.location || 'UK');
-          item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}&l=${location}`;
-          item.guid = `indeed-fallback-${Date.now()}-${Math.random()}`;
+          item.guid = `indeed-search-${Date.now()}-${Math.random()}`;
+          console.log('⚠️ No job ID found, created targeted search:', item.link);
         }
       }
 
@@ -813,15 +826,17 @@ function parseIndeedRSS(rssText: string): any[] {
 
       // Ensure we have a working link
       if (!item.link) {
-        const searchTerms = encodeURIComponent(item.title || 'jobs');
-        const company = item.company && item.company !== 'Company Not Specified' ? encodeURIComponent(item.company) : '';
+        const searchTerms = encodeURIComponent(`"${item.title || 'jobs'}"`);
+        const company = item.company && item.company !== 'Company Not Specified' ?
+                       encodeURIComponent(`"${item.company}"`) : '';
         const location = encodeURIComponent(item.location || 'UK');
 
         if (company) {
-          item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}+${company}&l=${location}`;
+          item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}+${company}&l=${location}&sort=date&radius=25`;
         } else {
-          item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}&l=${location}`;
+          item.link = `https://www.indeed.co.uk/jobs?q=${searchTerms}&l=${location}&sort=date&radius=25`;
         }
+        console.log('🔄 Generated fallback link:', item.link);
       }
 
       // Only add items that have at least a title
