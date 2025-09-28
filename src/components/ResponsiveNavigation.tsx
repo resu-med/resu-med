@@ -204,14 +204,14 @@ export default function ResponsiveNavigation({
       </div>
     </nav>
 
-    {/* Progress Breadcrumbs */}
-    {authState.isAuthenticated && showProgressBreadcrumbs && (
+    {/* Progress Breadcrumbs - Disabled to avoid visual clutter and logout bugs */}
+    {/* {authState.isAuthenticated && showProgressBreadcrumbs && (
       <ProgressBreadcrumbs
         profile={profileState.profile}
         currentSection={currentSection || 'upload'}
         onNavigateToSection={onNavigateToSection || (() => {})}
       />
-    )}
+    )} */}
   </div>
   );
 }
