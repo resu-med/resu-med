@@ -55,10 +55,14 @@ function createResumePDF(content: string, profile?: any): jsPDF {
   let currentY = margin;
 
   console.log('📄 Creating resume PDF, content length:', content.length);
+  console.log('👤 Profile received:', profile);
 
   // Add personal information header from profile if available
   if (profile?.personalInfo) {
+    console.log('✅ Adding personal info to PDF');
     currentY = addPersonalInfoToPDF(doc, profile.personalInfo, currentY, pageWidth, margin);
+  } else {
+    console.log('⚠️ No personal info found in profile');
   }
 
   // Parse and add resume content
@@ -77,10 +81,14 @@ function createCoverLetterPDF(content: string, profile?: any): jsPDF {
   let currentY = margin;
 
   console.log('📄 Creating cover letter PDF, content length:', content.length);
+  console.log('👤 Cover letter profile received:', profile);
 
   // Add personal information header from profile if available
   if (profile?.personalInfo) {
+    console.log('✅ Adding personal info to cover letter PDF');
     currentY = addPersonalInfoToPDF(doc, profile.personalInfo, currentY, pageWidth, margin);
+  } else {
+    console.log('⚠️ No personal info found in cover letter profile');
   }
 
   // Add date
@@ -126,8 +134,10 @@ function createCoverLetterPDF(content: string, profile?: any): jsPDF {
 function addPersonalInfoToPDF(doc: jsPDF, personalInfo: any, startY: number, pageWidth: number, margin: number): number {
   let currentY = startY;
 
+  console.log('👤 Personal info received:', personalInfo);
+
   // Add full name as header
-  if (personalInfo.firstName || personalInfo.lastName) {
+  if (personalInfo?.firstName || personalInfo?.lastName) {
     const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim();
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
@@ -376,17 +386,19 @@ function parseResumeContent(content: string): any {
     education: ''
   };
 
+  console.log('🔍 Parsing resume content:', content.substring(0, 500));
+
   const lines = content.split('\n').map(line => line.trim()).filter(line => line);
   let currentSection = '';
   let sectionContent: string[] = [];
   let currentJob: any = null;
 
-  // Section patterns
+  // More flexible section patterns
   const sectionPatterns = {
-    summary: /^(PROFESSIONAL SUMMARY|SUMMARY|PROFILE|OVERVIEW)$/i,
-    skills: /^(CORE COMPETENCIES|SKILLS|COMPETENCIES|TECHNICAL SKILLS)$/i,
-    experience: /^(PROFESSIONAL EXPERIENCE|EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT)$/i,
-    education: /^(EDUCATION|ACADEMIC BACKGROUND|QUALIFICATIONS)$/i
+    summary: /^(PROFESSIONAL SUMMARY|SUMMARY|PROFILE|OVERVIEW|OBJECTIVE|PERSONAL STATEMENT)/i,
+    skills: /^(CORE COMPETENCIES|SKILLS|COMPETENCIES|TECHNICAL SKILLS|KEY SKILLS|SKILLS INVENTORY)/i,
+    experience: /^(PROFESSIONAL EXPERIENCE|EXPERIENCE|WORK EXPERIENCE|EMPLOYMENT|WORK HISTORY|CAREER HISTORY)/i,
+    education: /^(EDUCATION|ACADEMIC BACKGROUND|QUALIFICATIONS|ACADEMIC QUALIFICATIONS)/i
   };
 
   for (let i = 0; i < lines.length; i++) {
@@ -455,6 +467,20 @@ function parseResumeContent(content: string): any {
       sections[currentSection] = sectionContent.join('\n').trim();
     }
   }
+
+  // If no sections were parsed, treat the entire content as summary
+  const hasContent = sections.summary || sections.skills || sections.experience.length > 0 || sections.education;
+  if (!hasContent && content.trim()) {
+    console.log('⚠️ No sections found, using entire content as summary');
+    sections.summary = content.trim();
+  }
+
+  console.log('📋 Parsed sections:', {
+    summary: !!sections.summary,
+    skills: !!sections.skills,
+    experience: sections.experience.length,
+    education: !!sections.education
+  });
 
   return sections;
 }
