@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Search multiple job APIs in parallel based on selected providers
     const searchPromises: Promise<JobListing[]>[] = [];
     const enabledProviders = selectedProviders && selectedProviders.length > 0 ? selectedProviders : [
-      'Reed', 'Adzuna', 'Indeed' // Prioritize the three main providers
+      'Reed', 'Adzuna', 'RemoteOK' // Focus on reliable APIs
     ];
 
     console.log('🔍 Enabled providers:', enabledProviders);
@@ -609,8 +609,8 @@ async function searchIndeedJobs(filters: JobSearchFilters): Promise<JobListing[]
     console.log(`📋 Parsed ${items.length} jobs from Indeed RSS`);
 
     if (items.length === 0) {
-      console.warn('⚠️ No jobs parsed from Indeed RSS, using fallback');
-      return generateIndeedFallbackJobs(filters);
+      console.warn('⚠️ No jobs parsed from Indeed RSS, returning empty array');
+      return [];
     }
 
     return items.slice(0, 12).map((item, index): JobListing => ({
@@ -632,10 +632,10 @@ async function searchIndeedJobs(filters: JobSearchFilters): Promise<JobListing[]
 
   } catch (error) {
     console.error('Indeed search failed:', error);
-    console.log('🔄 Falling back to Indeed-style sample jobs');
+    console.log('⚠️ Indeed API unavailable, skipping to avoid duplicate/fake results');
 
-    // Fallback: Generate realistic Indeed-style jobs
-    return generateIndeedFallbackJobs(filters);
+    // Return empty array instead of fake jobs to avoid confusion
+    return [];
   }
 }
 
