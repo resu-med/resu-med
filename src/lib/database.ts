@@ -127,6 +127,43 @@ export async function initializeDatabase() {
       )
     `;
 
+    // Create user subscriptions table
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        plan_id VARCHAR(50) NOT NULL DEFAULT 'free',
+        tier VARCHAR(20) NOT NULL DEFAULT 'free',
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        current_period_start TIMESTAMP DEFAULT NOW(),
+        current_period_end TIMESTAMP DEFAULT NOW() + INTERVAL '30 days',
+        cancel_at_period_end BOOLEAN DEFAULT FALSE,
+        stripe_subscription_id VARCHAR(255),
+        stripe_customer_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id)
+      )
+    `;
+
+    // Create user usage tracking table
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_usage (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        month VARCHAR(7) NOT NULL, -- YYYY-MM format
+        job_searches INTEGER DEFAULT 0,
+        ai_optimizations INTEGER DEFAULT 0,
+        cover_letters_generated INTEGER DEFAULT 0,
+        profile_exports INTEGER DEFAULT 0,
+        last_job_search TIMESTAMP,
+        last_reset_date TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(user_id, month)
+      )
+    `;
+
     console.log('✅ Database tables initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

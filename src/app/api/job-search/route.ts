@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { JobListing } from '@/types/profile';
 import { trackAPIUsage } from '@/lib/api-usage-tracker';
+import { canPerformAction, trackUsage, initializeUserSubscription } from '@/lib/subscription-usage-tracker';
+import jwt from 'jsonwebtoken';
 
 interface JobSearchFilters {
   keywords: string;
@@ -15,8 +17,40 @@ interface JobSearchFilters {
   pageSize?: number;
 }
 
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+
 export async function POST(request: NextRequest) {
   try {
+    // Check user authentication and subscription limits
+    const authHeader = request.headers.get('authorization');
+    let userId: number | null = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        userId = decoded.userId;
+      } catch (error) {
+        console.log('Invalid or expired token');
+      }
+    }
+
+    // If user is authenticated, check subscription limits
+    if (userId) {
+      // Initialize subscription if needed
+      await initializeUserSubscription(userId);
+
+      // Check if user can perform job search
+      const canSearch = await canPerformAction(userId, 'job-search');
+      if (!canSearch) {
+        return NextResponse.json({
+          error: 'Job search limit exceeded',
+          message: 'You have reached your monthly job search limit. Please upgrade your plan to continue.',
+          upgradeRequired: true
+        }, { status: 429 });
+      }
+    }
+
     const filters: JobSearchFilters = await request.json();
     const { keywords, location, jobType, experienceLevel, salaryMin, salaryMax, remote, selectedProviders, page = 1, pageSize = 20 } = filters;
 
@@ -123,6 +157,11 @@ export async function POST(request: NextRequest) {
     const endIndex = startIndex + pageSize;
     const paginatedJobs = sortedJobs.slice(startIndex, endIndex);
     const totalPages = Math.ceil(sortedJobs.length / pageSize);
+
+    // Track usage for authenticated users
+    if (userId) {
+      await trackUsage(userId, 'job-search');
+    }
 
     return NextResponse.json({
       jobs: paginatedJobs,

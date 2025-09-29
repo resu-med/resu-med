@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, initializeDatabase } from '@/lib/database';
 import { verifyAdminToken, createAdminAPIResponse } from '@/lib/admin-middleware';
+import { getSubscriptionStats } from '@/lib/subscription-usage-tracker';
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,11 +34,17 @@ export async function GET(request: NextRequest) {
       sql`SELECT COUNT(*) as count FROM users WHERE last_login_at >= CURRENT_DATE - INTERVAL '30 days'`
     ]);
 
-    // Get recent users
+    // Get recent users with subscription data
+    const currentMonth = new Date().toISOString().slice(0, 7);
     const recentUsers = await sql`
-      SELECT id, email, name, email_verified, is_admin, created_at, last_login_at
-      FROM users
-      ORDER BY created_at DESC
+      SELECT
+        u.id, u.email, u.name, u.email_verified, u.is_admin, u.created_at, u.last_login_at,
+        s.plan_id, s.tier, s.status,
+        usage.job_searches, usage.ai_optimizations, usage.cover_letters_generated, usage.profile_exports
+      FROM users u
+      LEFT JOIN user_subscriptions s ON u.id = s.user_id
+      LEFT JOIN user_usage usage ON u.id = usage.user_id AND usage.month = ${currentMonth}
+      ORDER BY u.created_at DESC
       LIMIT 10
     `;
 
@@ -52,6 +59,9 @@ export async function GET(request: NextRequest) {
       ORDER BY date DESC
     `;
 
+    // Get subscription stats
+    const subscriptionStats = await getSubscriptionStats();
+
     return NextResponse.json({
       user_stats: {
         total_users: parseInt(totalUsers[0].count),
@@ -65,7 +75,8 @@ export async function GET(request: NextRequest) {
       user_growth: userGrowth.map(row => ({
         date: row.date,
         new_users: parseInt(row.new_users)
-      }))
+      })),
+      subscription_stats: subscriptionStats
     });
 
   } catch (error) {

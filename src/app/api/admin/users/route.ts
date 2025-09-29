@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, initializeDatabase } from '@/lib/database';
 import { verifyAdminToken, createAdminAPIResponse } from '@/lib/admin-middleware';
+import { getUsersWithSubscriptionData } from '@/lib/subscription-usage-tracker';
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,19 +38,30 @@ export async function GET(request: NextRequest) {
 
     const totalUsers = parseInt(countQuery[0].count);
 
-    // Get users with pagination
+    // Get users with subscription data
+    const currentMonth = new Date().toISOString().slice(0, 7);
     const usersQuery = search
       ? await sql`
-          SELECT id, email, name, email_verified, is_admin, last_login_at, created_at, updated_at
-          FROM users
-          WHERE LOWER(email) LIKE LOWER(${`%${search}%`}) OR LOWER(name) LIKE LOWER(${`%${search}%`})
-          ORDER BY created_at DESC
+          SELECT
+            u.id, u.email, u.name, u.email_verified, u.is_admin, u.last_login_at, u.created_at, u.updated_at,
+            s.plan_id, s.tier, s.status,
+            usage.job_searches, usage.ai_optimizations, usage.cover_letters_generated, usage.profile_exports
+          FROM users u
+          LEFT JOIN user_subscriptions s ON u.id = s.user_id
+          LEFT JOIN user_usage usage ON u.id = usage.user_id AND usage.month = ${currentMonth}
+          WHERE LOWER(u.email) LIKE LOWER(${`%${search}%`}) OR LOWER(u.name) LIKE LOWER(${`%${search}%`})
+          ORDER BY u.created_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `
       : await sql`
-          SELECT id, email, name, email_verified, is_admin, last_login_at, created_at, updated_at
-          FROM users
-          ORDER BY created_at DESC
+          SELECT
+            u.id, u.email, u.name, u.email_verified, u.is_admin, u.last_login_at, u.created_at, u.updated_at,
+            s.plan_id, s.tier, s.status,
+            usage.job_searches, usage.ai_optimizations, usage.cover_letters_generated, usage.profile_exports
+          FROM users u
+          LEFT JOIN user_subscriptions s ON u.id = s.user_id
+          LEFT JOIN user_usage usage ON u.id = usage.user_id AND usage.month = ${currentMonth}
+          ORDER BY u.created_at DESC
           LIMIT ${limit} OFFSET ${offset}
         `;
 

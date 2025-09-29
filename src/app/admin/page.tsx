@@ -13,6 +13,21 @@ interface UserStats {
   active_users_last_30_days: number;
 }
 
+interface SubscriptionStats {
+  subscription_counts: {
+    free: number;
+    pro: number;
+    professional: number;
+  };
+  usage_stats: {
+    total_job_searches: number;
+    total_ai_optimizations: number;
+    total_cover_letters: number;
+    total_exports: number;
+    active_users: number;
+  };
+}
+
 interface APIStatus {
   name: string;
   used: number;
@@ -39,6 +54,13 @@ interface User {
   is_admin: boolean;
   last_login_at: string | null;
   created_at: string;
+  plan_id?: string;
+  tier?: string;
+  status?: string;
+  job_searches?: number;
+  ai_optimizations?: number;
+  cover_letters_generated?: number;
+  profile_exports?: number;
 }
 
 export default function AdminDashboard() {
@@ -46,6 +68,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'api-usage'>('overview');
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [subscriptionStats, setSubscriptionStats] = useState<SubscriptionStats | null>(null);
   const [apiUsage, setApiUsage] = useState<{
     summary: APIUsageSummary;
     api_status: APIStatus[];
@@ -97,6 +120,7 @@ export default function AdminDashboard() {
       ]);
 
       setUserStats(dashboardData.user_stats);
+      setSubscriptionStats(dashboardData.subscription_stats);
       setRecentUsers(dashboardData.recent_users);
       setApiUsage({
         summary: apiUsageData.summary,
@@ -209,7 +233,7 @@ export default function AdminDashboard() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               {userStats && (
                 <>
                   <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -344,6 +368,56 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* Subscription Usage Summary */}
+            {subscriptionStats && (
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">Subscription Usage This Month</h3>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{subscriptionStats.usage_stats.total_job_searches}</div>
+                      <div className="text-sm text-gray-500">Job Searches</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{subscriptionStats.usage_stats.total_ai_optimizations}</div>
+                      <div className="text-sm text-gray-500">AI Optimizations</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">{subscriptionStats.usage_stats.total_cover_letters}</div>
+                      <div className="text-sm text-gray-500">Cover Letters</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">{subscriptionStats.usage_stats.total_exports}</div>
+                      <div className="text-sm text-gray-500">Exports</div>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-6">
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Subscription Distribution</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="text-lg font-semibold text-gray-600">Free</div>
+                        <div className="text-2xl font-bold text-gray-800">{subscriptionStats.subscription_counts.free || 0}</div>
+                        <div className="text-sm text-gray-500">users</div>
+                      </div>
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="text-lg font-semibold text-blue-600">Pro</div>
+                        <div className="text-2xl font-bold text-blue-800">{subscriptionStats.subscription_counts.pro || 0}</div>
+                        <div className="text-sm text-blue-500">users</div>
+                      </div>
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <div className="text-lg font-semibold text-purple-600">Professional</div>
+                        <div className="text-2xl font-bold text-purple-800">{subscriptionStats.subscription_counts.professional || 0}</div>
+                        <div className="text-sm text-purple-500">users</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Recent Users */}
             <div className="bg-white shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200">
@@ -355,6 +429,8 @@ export default function AdminDashboard() {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage This Month</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
                     </tr>
@@ -381,6 +457,29 @@ export default function AdminDashboard() {
                               </span>
                             )}
                           </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.plan_id === 'professional' ? 'bg-gold-100 text-gold-800' :
+                            user.plan_id === 'pro' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.plan_id === 'professional' ? 'Professional' :
+                             user.plan_id === 'pro' ? 'Pro' :
+                             'Free'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.job_searches !== null ? (
+                            <div className="text-xs space-y-1">
+                              <div>Searches: {user.job_searches || 0}</div>
+                              <div>AI Opt: {user.ai_optimizations || 0}</div>
+                              <div>Letters: {user.cover_letters_generated || 0}</div>
+                              <div>Exports: {user.profile_exports || 0}</div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">No usage</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(user.created_at).toLocaleDateString()}

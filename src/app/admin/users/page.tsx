@@ -13,6 +13,13 @@ interface User {
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+  plan_id?: string;
+  tier?: string;
+  status?: string;
+  job_searches?: number;
+  ai_optimizations?: number;
+  cover_letters_generated?: number;
+  profile_exports?: number;
 }
 
 interface PaginationInfo {
@@ -251,6 +258,12 @@ export default function UserManagement() {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Plan
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Usage This Month
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Login
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -264,13 +277,13 @@ export default function UserManagement() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                       Loading users...
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                       No users found
                     </td>
                   </tr>
@@ -302,6 +315,29 @@ export default function UserManagement() {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          user.plan_id === 'professional' ? 'bg-gold-100 text-gold-800' :
+                          user.plan_id === 'pro' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {user.plan_id === 'professional' ? 'Professional' :
+                           user.plan_id === 'pro' ? 'Pro' :
+                           'Free'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {user.job_searches !== null && user.job_searches !== undefined ? (
+                          <div className="text-xs space-y-1">
+                            <div>Searches: {user.job_searches || 0}</div>
+                            <div>AI Opt: {user.ai_optimizations || 0}</div>
+                            <div>Letters: {user.cover_letters_generated || 0}</div>
+                            <div>Exports: {user.profile_exports || 0}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No usage</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {user.last_login_at
