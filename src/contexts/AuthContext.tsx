@@ -7,6 +7,7 @@ interface AuthUser {
   email: string;
   name: string;
   emailVerified: boolean;
+  isAdmin: boolean;
   createdAt: string;
 }
 

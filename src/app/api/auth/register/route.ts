@@ -77,16 +77,17 @@ export async function POST(request: NextRequest) {
 
     // Create user with proper security
     const result = await sql`
-      INSERT INTO users (email, name, password_hash, email_verified, created_at, updated_at)
+      INSERT INTO users (email, name, password_hash, email_verified, is_admin, created_at, updated_at)
       VALUES (
         ${email.toLowerCase()},
         ${name.trim()},
         ${passwordHash},
         false,
+        false,
         NOW(),
         NOW()
       )
-      RETURNING id, email, name, email_verified, created_at
+      RETURNING id, email, name, email_verified, is_admin, created_at
     `;
 
     const user = result[0];
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.name,
         emailVerified: user.email_verified,
+        isAdmin: user.is_admin,
         createdAt: user.created_at
       }
     }, { status: 201 });

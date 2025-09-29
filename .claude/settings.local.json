@@ -17,7 +17,14 @@
       "Bash(npm run lint)",
       "Bash(git checkout:*)",
       "Bash(git branch:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "WebSearch",
+      "WebFetch(domain:www.arbeitnow.com)",
+      "WebFetch(domain:documenter.getpostman.com)",
+      "WebFetch(domain:rapidapi.com)",
+      "Bash(git config:*)",
+      "WebFetch(domain:www.cv-library.co.uk)",
+      "WebFetch(domain:apitracker.io)"
     ],
     "deny": [],
     "ask": []

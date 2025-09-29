@@ -81,6 +81,11 @@ export default function ResponsiveNavigation({
                 <Link href="/templates" className={getLinkClassName('templates')}>
                   Templates
                 </Link>
+                {authState.user?.isAdmin && (
+                  <Link href="/admin" className="text-purple-600 hover:text-purple-700 font-medium transition-colors border border-purple-300 px-3 py-1 rounded-md hover:bg-purple-50">
+                    Admin
+                  </Link>
+                )}
               </>
             )}
             <button className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
@@ -143,6 +148,11 @@ export default function ResponsiveNavigation({
                   <Link href="/templates" className={getMobileLinkClassName('templates')} onClick={closeMobileMenu}>
                     Templates
                   </Link>
+                  {authState.user?.isAdmin && (
+                    <Link href="/admin" className="block px-3 py-2 rounded-md text-base font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 border border-purple-300 mx-2" onClick={closeMobileMenu}>
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <button className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-teal-600 hover:bg-teal-50">
                     About
                   </button>
