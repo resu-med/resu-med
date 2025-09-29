@@ -84,7 +84,7 @@ export default function SkillsForm() {
                 type="text"
                 value={newSkill.name}
                 onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                 placeholder="Skill name (e.g., JavaScript, Leadership, Spanish)"
               />
             </div>
@@ -92,7 +92,7 @@ export default function SkillsForm() {
               <select
                 value={newSkill.category}
                 onChange={(e) => setNewSkill({ ...newSkill, category: e.target.value as Skill['category'] })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               >
                 <option value="technical">Technical</option>
                 <option value="soft">Soft Skills</option>
@@ -104,7 +104,7 @@ export default function SkillsForm() {
               <select
                 value={newSkill.level}
                 onChange={(e) => setNewSkill({ ...newSkill, level: e.target.value as Skill['level'] })}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               >
                 <option value="beginner">Beginner</option>
                 <option value="intermediate">Intermediate</option>
@@ -144,7 +144,7 @@ export default function SkillsForm() {
                           type="text"
                           value={skill.name}
                           onChange={(e) => handleUpdate(skill.id, 'name', e.target.value)}
-                          className="font-medium text-gray-900 bg-transparent border-none p-0 focus:ring-0 focus:outline-none flex-1"
+                          className="font-medium text-gray-900 bg-white border-none p-0 focus:ring-0 focus:outline-none flex-1"
                         />
                         <button
                           onClick={() => handleDelete(skill.id)}
@@ -157,7 +157,7 @@ export default function SkillsForm() {
                         <select
                           value={skill.category}
                           onChange={(e) => handleUpdate(skill.id, 'category', e.target.value)}
-                          className="text-xs px-2 py-1 border border-gray-300 rounded"
+                          className="text-xs px-2 py-1 border border-gray-300 rounded text-gray-900 bg-white"
                         >
                           <option value="technical">Technical</option>
                           <option value="soft">Soft Skills</option>
