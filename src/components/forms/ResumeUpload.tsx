@@ -24,28 +24,27 @@ async function parseClientPDF(file: File): Promise<string> {
     const version = pdfjs.version || '5.4.149';
     console.log('📦 Using pdfjs-dist version:', version);
 
-    // Disable external workers entirely to avoid CORS issues
-    console.log('🚫 Disabling external workers to avoid CORS issues');
-    pdfjs.GlobalWorkerOptions.workerSrc = '';
-
-    // For better performance, we could create a local worker file later
-    console.log('✅ PDF.js configured to run without external worker dependencies');
+    // Use local worker file to avoid CORS issues
+    console.log('🔧 Setting up local PDF.js worker');
+    pdfjs.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.mjs';
+    console.log('✅ PDF.js configured with local worker:', pdfjs.GlobalWorkerOptions.workerSrc);
 
     const arrayBuffer = await file.arrayBuffer();
     console.log('📁 PDF file loaded into memory, size:', arrayBuffer.byteLength, 'bytes');
 
-    // Load PDF without worker to avoid CORS and external dependency issues
+    // Load PDF with local worker
     const pdf = await pdfjs.getDocument({
       data: arrayBuffer,
-      disableWorker: true,           // Force disable worker
-      useWorkerFetch: false,         // Don't use worker for fetching
+      disableWorker: false,          // Enable worker since we have a local one
+      useWorkerFetch: false,         // Don't use worker for fetching external resources
       isEvalSupported: false,        // Disable eval for security
       useSystemFonts: true,          // Use system fonts
-      cMapUrl: null,                 // Disable external CMap loading
-      cMapPacked: false              // Don't use packed CMaps
+      cMapUrl: null,                 // Disable CMap loading to avoid external requests
+      cMapPacked: false,             // Don't use packed CMaps
+      standardFontDataUrl: null      // Don't load external fonts
     }).promise;
 
-    console.log('📑 PDF document loaded successfully (no worker), pages:', pdf.numPages);
+    console.log('📑 PDF document loaded successfully with local worker, pages:', pdf.numPages);
 
     let text = '';
 
