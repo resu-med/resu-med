@@ -379,12 +379,20 @@ function createPersonalInfoHeader(personalInfo: any): Paragraph[] {
     );
   }
 
-  // Add LinkedIn and Website if available
+  // Add LinkedIn and Website if available (and not placeholder text)
   const additionalInfo = [];
-  if (personalInfo.linkedin) {
+  if (personalInfo.linkedin &&
+      personalInfo.linkedin.trim() &&
+      !personalInfo.linkedin.includes('linkedin.com/in/[username]') &&
+      !personalInfo.linkedin.includes('[') &&
+      personalInfo.linkedin !== 'N/A') {
     additionalInfo.push(`LinkedIn: ${personalInfo.linkedin}`);
   }
-  if (personalInfo.website) {
+  if (personalInfo.website &&
+      personalInfo.website.trim() &&
+      !personalInfo.website.includes('[') &&
+      !personalInfo.website.includes('Portfolio Link') &&
+      personalInfo.website !== 'N/A') {
     additionalInfo.push(`Portfolio: ${personalInfo.website}`);
   }
 

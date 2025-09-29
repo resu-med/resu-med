@@ -335,11 +335,12 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
 
     FORMATTING REQUIREMENTS:
     Start with proper business letter formatting:
-    - Applicant's full name as header
-    - Contact information (location, email, phone, LinkedIn if available, portfolio if available)
     - Current date
     - Company name and "Re: [Job Title] Position"
     - Proper salutation
+
+    IMPORTANT: DO NOT include personal contact information (name, email, phone, location, LinkedIn, portfolio)
+    as this will be handled separately in the document header.
 
     WRITING INSTRUCTIONS:
     Create a compelling 4-paragraph cover letter that:
@@ -795,14 +796,8 @@ function generateTailoredCoverLetter(profile: UserProfile, jobTitle: string, com
   const secondAchievements = secondExperience?.achievements || [];
   const allAchievements = [...topAchievements, ...secondAchievements];
 
-  // Build professional letter header with personal information
-  const letterHeader = `${personalInfo.firstName} ${personalInfo.lastName}
-${personalInfo.location || 'Available upon request'}
-${personalInfo.email}${personalInfo.phone ? ` | ${personalInfo.phone}` : ''}${personalInfo.linkedin ? `
-LinkedIn: ${personalInfo.linkedin}` : ''}${personalInfo.website ? `
-Portfolio: ${personalInfo.website}` : ''}
-
-${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+  // Build professional letter header with only non-duplicated information
+  const letterHeader = `${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
 
 ${companyName} Hiring Team
 Re: ${jobTitle} Position`;
