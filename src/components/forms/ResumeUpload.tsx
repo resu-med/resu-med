@@ -6,16 +6,25 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { FileParser } from '@/lib/fileParser';
 import { SmartResumeParser } from '@/lib/smartResumeParser';
 import ProfileHealthCheck from '@/components/ProfileHealthCheck';
-// @ts-ignore - react-pdf types might not be perfect
-import { pdfjs } from 'react-pdf';
-
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 // Client-side PDF parsing function
 async function parseClientPDF(file: File): Promise<string> {
+  // Only run on client-side
+  if (typeof window === 'undefined') {
+    throw new Error('PDF parsing only available on client-side');
+  }
+
   try {
     console.log('🔄 Starting client-side PDF parsing...');
+
+    // Dynamic import to avoid SSR issues
+    const { pdfjs } = await import('react-pdf');
+
+    // Set up PDF.js worker
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+      pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
