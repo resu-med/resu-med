@@ -89,11 +89,28 @@ export default function ResumeUpload() {
             achievements: Array.isArray(exp.achievements) ? exp.achievements : []
           }));
 
-          transformedExperience.forEach((exp: any) => {
+          // Sort experience by most recent first (current roles first, then by start date)
+          const sortedExperience = [...transformedExperience].sort((a, b) => {
+            // Current roles first
+            if (a.current && !b.current) return -1;
+            if (!a.current && b.current) return 1;
+
+            // Then sort by start date (most recent first)
+            const dateA = new Date(a.startDate || '1900-01-01');
+            const dateB = new Date(b.startDate || '1900-01-01');
+            return dateB.getTime() - dateA.getTime();
+          });
+
+          console.log('📅 Sorted experience by date (most recent first):');
+          sortedExperience.forEach((exp: any, index: number) => {
+            console.log(`${index + 1}. ${exp.company} - ${exp.jobTitle} (${exp.startDate} to ${exp.current ? 'Present' : exp.endDate})`);
+          });
+
+          sortedExperience.forEach((exp: any) => {
             console.log('🚀 Dispatching experience:', exp.company, '-', exp.jobTitle);
             dispatch({ type: 'ADD_EXPERIENCE', payload: exp });
           });
-          console.log('🏁 Finished dispatching all experiences');
+          console.log('🏁 Finished dispatching all experiences in chronological order');
         } else {
           console.log('❌ No experience data found or empty array');
         }

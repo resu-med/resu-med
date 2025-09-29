@@ -31,6 +31,8 @@ async function processParsedText(text: string, file: File) {
 
       const prompt = `Extract all information from this resume and return ONLY a valid JSON object. Pay special attention to skills and interests sections which may be listed under various headings like "Skills", "Technical Skills", "Core Competencies", "Interests", "Hobbies", "Personal Interests", etc.
 
+IMPORTANT: For work experience, maintain the original order from the resume document OR organize chronologically with the most recent position first. Always include accurate dates.
+
 For skills, extract ALL mentions including:
 - Technical skills (programming languages, software, tools)
 - Professional skills (project management, leadership, etc.)
@@ -100,7 +102,7 @@ ${text}`;
         messages: [
           {
             role: 'system',
-            content: 'You are an expert resume parser. Extract ALL structured data from resumes with high accuracy. Pay special attention to finding skills and interests which may be scattered throughout the resume or in dedicated sections. Extract technical skills, soft skills, tools, technologies, hobbies, interests, and personal activities. Always return valid JSON that matches the exact schema provided. Be precise with dates, job titles, and company names.'
+            content: 'You are an expert resume parser. Extract ALL structured data from resumes with high accuracy. Pay special attention to finding skills and interests which may be scattered throughout the resume or in dedicated sections. Extract technical skills, soft skills, tools, technologies, hobbies, interests, and personal activities. CRITICAL: For work experience, ensure you maintain chronological order with most recent positions first, and include accurate start/end dates in YYYY-MM or YYYY-MM-DD format. Always return valid JSON that matches the exact schema provided. Be precise with dates, job titles, and company names.'
           },
           {
             role: 'user',

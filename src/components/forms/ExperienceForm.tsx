@@ -89,11 +89,15 @@ export default function ExperienceForm() {
           {experience
             .slice()
             .sort((a, b) => {
-              // Sort by start date in descending order (most recent first)
-              if (!a.startDate && !b.startDate) return 0;
-              if (!a.startDate) return 1;
-              if (!b.startDate) return -1;
-              return b.startDate.localeCompare(a.startDate);
+              // Sort by most recent first (current roles first, then by start date)
+              // Current roles first
+              if (a.current && !b.current) return -1;
+              if (!a.current && b.current) return 1;
+
+              // Then sort by start date (most recent first)
+              const dateA = new Date(a.startDate || '1900-01-01');
+              const dateB = new Date(b.startDate || '1900-01-01');
+              return dateB.getTime() - dateA.getTime();
             })
             .map((exp) => (
             <div key={exp.id} className="border border-gray-200 rounded-lg p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
