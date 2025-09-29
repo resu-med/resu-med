@@ -25,6 +25,7 @@ export async function initializeDatabase() {
         password_hash VARCHAR(255) NOT NULL,
         email_verified BOOLEAN DEFAULT FALSE,
         is_admin BOOLEAN DEFAULT FALSE,
+        profile_photo TEXT,
         verification_token VARCHAR(255),
         reset_token VARCHAR(255),
         reset_token_expires TIMESTAMP,
