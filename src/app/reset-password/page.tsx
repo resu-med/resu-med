@@ -115,7 +115,7 @@ function ResetPasswordContent() {
 
             {/* Login Button */}
             <a
-              href="/login"
+              href="/auth"
               className="w-full bg-gradient-to-r from-teal-600 to-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-teal-700 hover:to-blue-700 transition-all duration-200 transform hover:scale-[1.02] shadow-lg text-center block"
             >
               Continue to Login
@@ -231,7 +231,7 @@ function ResetPasswordContent() {
           {/* Back to Login */}
           <div className="mt-6 text-center">
             <a
-              href="/login"
+              href="/auth"
               className="text-teal-600 hover:text-teal-700 font-medium text-sm transition-colors duration-200"
             >
               ← Back to Login
