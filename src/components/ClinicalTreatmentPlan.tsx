@@ -178,32 +178,32 @@ export default function ClinicalTreatmentPlan({
           {/* Missing Items Breakdown */}
           {completeness.overall.percentage < 100 && (
             <div className="mt-4 text-left">
-              <div className="text-sm font-semibold mb-2 text-white/90">
+              <div className="text-sm font-semibold mb-2 text-white">
                 🎯 To reach 100% health score:
               </div>
-              <div className="bg-white/10 rounded-lg p-3 text-xs">
+              <div className="bg-gray-900/80 border border-gray-700 rounded-lg p-3 text-xs">
                 {completeness.sections
                   .filter(section => section.status !== 'complete' || section.suggestions.length > 0)
                   .map((section, index) => (
                     <div key={section.id} className="mb-2 last:mb-0">
-                      <div className="font-medium text-white/90 mb-1">
+                      <div className="font-medium text-white mb-1">
                         {section.name} ({section.score}/{section.maxScore} points)
                       </div>
-                      <div className="text-white/70 ml-2">
+                      <div className="text-gray-300 ml-2">
                         {section.issues.length > 0 && (
-                          <div className="mb-1">
+                          <div className="mb-1 text-red-300">
                             ❌ {section.issues.slice(0, 2).join(', ')}
                           </div>
                         )}
                         {section.suggestions.length > 0 && (
-                          <div>
+                          <div className="text-yellow-300">
                             💡 {section.suggestions.slice(0, 2).join(', ')}
                           </div>
                         )}
                       </div>
                     </div>
                   ))}
-                <div className="mt-2 pt-2 border-t border-white/20 text-white/80 text-center">
+                <div className="mt-2 pt-2 border-t border-gray-600 text-gray-200 text-center">
                   Complete these items to unlock full functionality!
                 </div>
               </div>
