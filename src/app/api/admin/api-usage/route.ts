@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAdminToken, createAdminAPIResponse } from '@/lib/admin-middleware';
+import { verifyTesterToken, createTesterAPIResponse } from '@/lib/admin-middleware';
 import { getAPIUsage, getAPIUsageHistory, API_LIMITS } from '@/lib/api-usage-tracker';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin access
-    const authResult = await verifyAdminToken(request);
+    // Verify admin or tester access
+    const authResult = await verifyTesterToken(request);
     if (!authResult.isValid) {
-      return createAdminAPIResponse(authResult.error || 'Unauthorized');
+      return createTesterAPIResponse(authResult.error || 'Unauthorized');
     }
 
     const url = new URL(request.url);

@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
 
     // Build search query
+    let whereClause = '';
+    let searchParams: string[] = [];
 
     if (search) {
       whereClause = 'WHERE LOWER(email) LIKE LOWER($1) OR LOWER(name) LIKE LOWER($2)';
@@ -43,7 +45,7 @@ export async function GET(request: NextRequest) {
     const usersQuery = search
       ? await sql`
           SELECT
-            u.id, u.email, u.name, u.email_verified, u.is_admin, u.last_login_at, u.created_at, u.updated_at,
+            u.id, u.email, u.name, u.email_verified, u.is_admin, u.is_tester, u.last_login_at, u.created_at, u.updated_at,
             s.plan_id, s.tier, s.status,
             usage.job_searches, usage.ai_optimizations, usage.cover_letters_generated, usage.profile_exports
           FROM users u
@@ -55,7 +57,7 @@ export async function GET(request: NextRequest) {
         `
       : await sql`
           SELECT
-            u.id, u.email, u.name, u.email_verified, u.is_admin, u.last_login_at, u.created_at, u.updated_at,
+            u.id, u.email, u.name, u.email_verified, u.is_admin, u.is_tester, u.last_login_at, u.created_at, u.updated_at,
             s.plan_id, s.tier, s.status,
             usage.job_searches, usage.ai_optimizations, usage.cover_letters_generated, usage.profile_exports
           FROM users u

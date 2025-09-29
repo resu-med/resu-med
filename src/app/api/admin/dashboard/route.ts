@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, initializeDatabase } from '@/lib/database';
-import { verifyAdminToken, createAdminAPIResponse } from '@/lib/admin-middleware';
+import { verifyAdminToken, verifyTesterToken, createTesterAPIResponse } from '@/lib/admin-middleware';
 import { getSubscriptionStats } from '@/lib/subscription-usage-tracker';
 
 export async function GET(request: NextRequest) {
@@ -9,10 +9,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
 
-    // Verify admin access
-    const authResult = await verifyAdminToken(request);
+    // Verify admin or tester access
+    const authResult = await verifyTesterToken(request);
     if (!authResult.isValid) {
-      return createAdminAPIResponse(authResult.error || 'Unauthorized');
+      return createTesterAPIResponse(authResult.error || 'Unauthorized');
     }
 
     await initializeDatabase();
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const currentMonth = new Date().toISOString().slice(0, 7);
     const recentUsers = await sql`
       SELECT
-        u.id, u.email, u.name, u.email_verified, u.is_admin, u.created_at, u.last_login_at,
+        u.id, u.email, u.name, u.email_verified, u.is_admin, u.is_tester, u.created_at, u.last_login_at,
         s.plan_id, s.tier, s.status,
         usage.job_searches, usage.ai_optimizations, usage.cover_letters_generated, usage.profile_exports
       FROM users u

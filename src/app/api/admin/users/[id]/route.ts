@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Get user details
     const userResult = await sql`
       SELECT
-        u.id, u.email, u.name, u.email_verified, u.is_admin,
+        u.id, u.email, u.name, u.email_verified, u.is_admin, u.is_tester,
         u.last_login_at, u.created_at, u.updated_at,
         p.first_name, p.last_name, p.phone, p.location,
         p.website, p.linkedin, p.github
@@ -89,7 +89,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     const body = await request.json();
-    const { isAdmin, emailVerified } = body;
+    const { isAdmin, isTester, emailVerified } = body;
 
     // Prevent admin from removing their own admin status
     if (authResult.user?.userId === userId && isAdmin === false) {
@@ -108,6 +108,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (typeof isAdmin === 'boolean') {
       updates.push(`is_admin = $${paramIndex++}`);
       values.push(isAdmin);
+    }
+
+    if (typeof isTester === 'boolean') {
+      updates.push(`is_tester = $${paramIndex++}`);
+      values.push(isTester);
     }
 
     if (typeof emailVerified === 'boolean') {

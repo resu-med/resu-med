@@ -8,6 +8,7 @@ interface JWTPayload {
   email: string;
   name: string;
   isAdmin: boolean;
+  isTester?: boolean;
   iat?: number;
   exp?: number;
 }
@@ -49,9 +50,56 @@ export async function verifyAdminToken(request: NextRequest): Promise<{ isValid:
   }
 }
 
+export async function verifyTesterToken(request: NextRequest): Promise<{ isValid: boolean; user?: JWTPayload; error?: string }> {
+  try {
+    // Try to get token from Authorization header first
+    const authHeader = request.headers.get('authorization');
+    let token: string | null = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      // Fallback to cookie
+      token = request.cookies.get('auth-token')?.value || null;
+    }
+
+    if (!token) {
+      return { isValid: false, error: 'No authentication token provided' };
+    }
+
+    // Verify the token
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+
+    // Check if user is admin or tester
+    if (!decoded.isAdmin && !decoded.isTester) {
+      return { isValid: false, error: 'Admin or tester access required' };
+    }
+
+    return { isValid: true, user: decoded };
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      return { isValid: false, error: 'Invalid token' };
+    }
+    if (error instanceof jwt.TokenExpiredError) {
+      return { isValid: false, error: 'Token expired' };
+    }
+    return { isValid: false, error: 'Token verification failed' };
+  }
+}
+
 export function createAdminAPIResponse(error: string, status: number = 403) {
   return new Response(
     JSON.stringify({ error, requiresAdmin: true }),
+    {
+      status,
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+}
+
+export function createTesterAPIResponse(error: string, status: number = 403) {
+  return new Response(
+    JSON.stringify({ error, requiresTesterAccess: true }),
     {
       status,
       headers: { 'Content-Type': 'application/json' }

@@ -9,6 +9,7 @@ interface User {
   name: string;
   email_verified: boolean;
   is_admin: boolean;
+  is_tester?: boolean;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
@@ -50,7 +51,7 @@ export default function UserManagementTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'created_at' | 'last_login_at' | 'email'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [filterBy, setFilterBy] = useState<'all' | 'admin' | 'verified' | 'unverified'>('all');
+  const [filterBy, setFilterBy] = useState<'all' | 'admin' | 'tester' | 'verified' | 'unverified'>('all');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -91,11 +92,10 @@ export default function UserManagementTab() {
   const toggleAdminStatus = async (userId: number, currentStatus: boolean) => {
     try {
       const response = await fetch(`/api/admin/users/${userId}/toggle-admin`, {
-        method: 'PATCH',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ isAdmin: !currentStatus }),
       });
 
       if (response.ok) {
@@ -105,6 +105,25 @@ export default function UserManagementTab() {
       }
     } catch (error) {
       console.error('Error toggling admin status:', error);
+    }
+  };
+
+  const toggleTesterStatus = async (userId: number, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/toggle-tester`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        fetchUsers(); // Refresh the list
+      } else {
+        console.error('Failed to toggle tester status');
+      }
+    } catch (error) {
+      console.error('Error toggling tester status:', error);
     }
   };
 
@@ -136,9 +155,12 @@ export default function UserManagementTab() {
     });
   };
 
-  const getBadgeColor = (status: boolean | string | undefined, type: 'admin' | 'verified' | 'subscription') => {
+  const getBadgeColor = (status: boolean | string | undefined, type: 'admin' | 'tester' | 'verified' | 'subscription') => {
     if (type === 'admin') {
       return status ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800';
+    }
+    if (type === 'tester') {
+      return status ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800';
     }
     if (type === 'verified') {
       return status ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
@@ -181,6 +203,7 @@ export default function UserManagementTab() {
             >
               <option value="all">All Users</option>
               <option value="admin">Admins Only</option>
+              <option value="tester">Testers Only</option>
               <option value="verified">Verified Only</option>
               <option value="unverified">Unverified Only</option>
             </select>
@@ -253,6 +276,11 @@ export default function UserManagementTab() {
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getBadgeColor(user.is_admin, 'admin')}`}>
                           {user.is_admin ? 'Admin' : 'User'}
                         </span>
+                        {user.is_tester && (
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getBadgeColor(user.is_tester, 'tester')}`}>
+                            Tester
+                          </span>
+                        )}
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getBadgeColor(user.email_verified, 'verified')}`}>
                           {user.email_verified ? 'Verified' : 'Unverified'}
                         </span>
@@ -282,20 +310,32 @@ export default function UserManagementTab() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => toggleAdminStatus(user.id, user.is_admin)}
-                          className={`px-3 py-1 rounded text-xs font-medium ${
-                            user.is_admin
-                              ? 'bg-red-100 text-red-800 hover:bg-red-200'
-                              : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
-                          }`}
-                        >
-                          {user.is_admin ? 'Remove Admin' : 'Make Admin'}
-                        </button>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => toggleAdminStatus(user.id, user.is_admin)}
+                            className={`px-3 py-1 rounded text-xs font-medium ${
+                              user.is_admin
+                                ? 'bg-red-100 text-red-800 hover:bg-red-200'
+                                : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                            }`}
+                          >
+                            {user.is_admin ? 'Remove Admin' : 'Make Admin'}
+                          </button>
+                          <button
+                            onClick={() => toggleTesterStatus(user.id, user.is_tester || false)}
+                            className={`px-3 py-1 rounded text-xs font-medium ${
+                              user.is_tester
+                                ? 'bg-red-100 text-red-800 hover:bg-red-200'
+                                : 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                            }`}
+                          >
+                            {user.is_tester ? 'Remove Tester' : 'Make Tester'}
+                          </button>
+                        </div>
                         <button
                           onClick={() => deleteUser(user.id)}
-                          className="px-3 py-1 bg-red-100 text-red-800 rounded text-xs font-medium hover:bg-red-200"
+                          className="px-3 py-1 bg-red-100 text-red-800 rounded text-xs font-medium hover:bg-red-200 self-start"
                         >
                           Delete
                         </button>

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email
     const userResult = await sql`
-      SELECT id, email, name, password_hash, email_verified, is_admin, created_at
+      SELECT id, email, name, password_hash, email_verified, is_admin, is_tester, created_at
       FROM users
       WHERE email = ${email.toLowerCase()}
     `;
@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         email: user.email,
         name: user.name,
-        isAdmin: user.is_admin
+        isAdmin: user.is_admin,
+        isTester: user.is_tester || false
       },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN }
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
         name: user.name,
         emailVerified: user.email_verified,
         isAdmin: user.is_admin,
+        isTester: user.is_tester || false,
         createdAt: user.created_at
       },
       token

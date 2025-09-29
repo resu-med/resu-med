@@ -25,6 +25,7 @@ export async function initializeDatabase() {
         password_hash VARCHAR(255) NOT NULL,
         email_verified BOOLEAN DEFAULT FALSE,
         is_admin BOOLEAN DEFAULT FALSE,
+        is_tester BOOLEAN DEFAULT FALSE,
         profile_photo TEXT,
         verification_token VARCHAR(255),
         reset_token VARCHAR(255),
@@ -36,6 +37,16 @@ export async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `;
+
+    // Add is_tester column if it doesn't exist (migration)
+    try {
+      await sql`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS is_tester BOOLEAN DEFAULT FALSE
+      `;
+    } catch (error) {
+      // Column might already exist, ignore error
+      console.log('is_tester column already exists or could not be added');
+    }
 
     // Create user_profiles table
     await sql`
