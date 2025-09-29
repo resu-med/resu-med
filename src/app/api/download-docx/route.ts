@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, LevelFormat, convertInchesToTwip } from 'docx';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +49,33 @@ export async function POST(request: NextRequest) {
 function createResumeDocument(content: string, profile?: any): Document {
   console.log('📄 Creating resume document from UI content, content length:', content.length);
 
+  // Consistent font and size standards
+  const FONT_FAMILY = "Calibri";
+  const FONTS = {
+    NAME: 32,           // 16pt - Name header
+    SECTION_HEADER: 28, // 14pt - Section headers
+    JOB_TITLE: 24,      // 12pt - Job titles
+    COMPANY: 22,        // 11pt - Company names
+    BODY: 22,           // 11pt - Body text and bullets
+    CONTACT: 20,        // 10pt - Contact info
+    DATE: 20            // 10pt - Dates
+  };
+
+  const COLORS = {
+    PRIMARY: "1F4E79",   // Dark blue for headers
+    SECONDARY: "2D4A6B", // Medium blue for companies
+    BODY: "000000",      // Black for body text
+    MUTED: "666666"      // Gray for dates/contact
+  };
+
+  const SPACING = {
+    SECTION: 400,        // Before section headers
+    SUBSECTION: 300,     // Before job titles
+    PARAGRAPH: 150,      // Between paragraphs
+    BULLET: 120,         // Between bullet points
+    SMALL: 100           // Small spacing
+  };
+
   const children: Paragraph[] = [];
 
   // Add personal information header first if available
@@ -94,15 +121,15 @@ function createResumeDocument(content: string, profile?: any): Document {
           new TextRun({
             text: cleanLine,
             bold: true,
-            size: 28,
-            color: "1F4E79",
-            font: "Calibri"
+            size: FONTS.SECTION_HEADER,
+            color: COLORS.PRIMARY,
+            font: FONT_FAMILY
           })
         ],
-        spacing: { before: 400, after: 200 },
+        spacing: { before: SPACING.SECTION, after: 200 },
         border: {
           bottom: {
-            color: "1F4E79",
+            color: COLORS.PRIMARY,
             size: 6,
             style: BorderStyle.SINGLE
           }
@@ -123,12 +150,12 @@ function createResumeDocument(content: string, profile?: any): Document {
           new TextRun({
             text: cleanJobTitle,
             bold: true,
-            size: 24,
-            color: "1F4E79",
-            font: "Calibri"
+            size: FONTS.JOB_TITLE,
+            color: COLORS.PRIMARY,
+            font: FONT_FAMILY
           })
         ],
-        spacing: { before: 300, after: 100 }
+        spacing: { before: SPACING.SUBSECTION, after: SPACING.SMALL }
       }));
     }
     // Company/location lines (after job titles)
@@ -143,12 +170,12 @@ function createResumeDocument(content: string, profile?: any): Document {
           new TextRun({
             text: line,
             bold: true,
-            size: 24, // 12pt in Word
-            color: "2D4A6B",
-            font: "Calibri"
+            size: FONTS.COMPANY,
+            color: COLORS.SECONDARY,
+            font: FONT_FAMILY
           })
         ],
-        spacing: { after: 100 }
+        spacing: { after: SPACING.SMALL }
       }));
     }
     // Date lines (contain years or Present)
@@ -158,26 +185,32 @@ function createResumeDocument(content: string, profile?: any): Document {
           new TextRun({
             text: line,
             italic: true,
-            size: 24, // 12pt in Word
-            color: "666666",
-            font: "Calibri"
+            size: FONTS.DATE,
+            color: COLORS.MUTED,
+            font: FONT_FAMILY
           })
         ],
-        spacing: { after: 150 }
+        spacing: { after: SPACING.PARAGRAPH }
       }));
     }
-    // Bullet points
+    // Bullet points - proper Word formatting
     else if (line.startsWith('•') || line.startsWith('-')) {
+      // Remove the manual bullet character and create proper Word bullet
+      const bulletText = line.replace(/^[•-]\s*/, '');
       children.push(new Paragraph({
         children: [
           new TextRun({
-            text: line,
-            size: 24, // 12pt in Word
-            font: "Calibri"
+            text: bulletText,
+            size: FONTS.BODY,
+            color: COLORS.BODY,
+            font: FONT_FAMILY
           })
         ],
-        spacing: { after: 100 },
-        indent: { left: 360 }
+        spacing: { after: SPACING.BULLET },
+        numbering: {
+          reference: "bullet-points",
+          level: 0
+        }
       }));
     }
     // Skill category headers (contain :)
@@ -187,12 +220,12 @@ function createResumeDocument(content: string, profile?: any): Document {
           new TextRun({
             text: line,
             bold: true,
-            size: 22,
-            color: "2D4A6B",
-            font: "Calibri"
+            size: FONTS.BODY,
+            color: COLORS.SECONDARY,
+            font: FONT_FAMILY
           })
         ],
-        spacing: { before: 200, after: 100 }
+        spacing: { before: 200, after: SPACING.SMALL }
       }));
     }
     // Regular paragraphs - clean asterisks
@@ -203,11 +236,12 @@ function createResumeDocument(content: string, profile?: any): Document {
           children: [
             new TextRun({
               text: cleanText,
-              size: 24, // 12pt in Word
-              font: "Calibri"
+              size: FONTS.BODY,
+              color: COLORS.BODY,
+              font: FONT_FAMILY
             })
           ],
-          spacing: { after: 150 }
+          spacing: { after: SPACING.PARAGRAPH }
         }));
       }
     }
@@ -219,15 +253,15 @@ function createResumeDocument(content: string, profile?: any): Document {
       new TextRun({
         text: "REFERENCES",
         bold: true,
-        size: 28,
-        color: "1F4E79",
-        font: "Calibri"
+        size: FONTS.SECTION_HEADER,
+        color: COLORS.PRIMARY,
+        font: FONT_FAMILY
       })
     ],
-    spacing: { before: 400, after: 200 },
+    spacing: { before: SPACING.SECTION, after: 200 },
     border: {
       bottom: {
-        color: "1F4E79",
+        color: COLORS.PRIMARY,
         size: 6,
         style: BorderStyle.SINGLE
       }
@@ -238,14 +272,38 @@ function createResumeDocument(content: string, profile?: any): Document {
     children: [
       new TextRun({
         text: "References on request",
-        size: 24, // 12pt in Word
-        font: "Calibri"
+        size: FONTS.BODY,
+        color: COLORS.BODY,
+        font: FONT_FAMILY
       })
     ],
-    spacing: { after: 150 }
+    spacing: { after: SPACING.PARAGRAPH }
   }));
 
   return new Document({
+    numbering: {
+      config: [
+        {
+          reference: "bullet-points",
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.BULLET,
+              text: "•",
+              alignment: AlignmentType.LEFT,
+              style: {
+                paragraph: {
+                  indent: {
+                    left: convertInchesToTwip(0.25),
+                    hanging: convertInchesToTwip(0.25)
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
     sections: [{
       properties: {
         page: {
@@ -265,6 +323,19 @@ function createResumeDocument(content: string, profile?: any): Document {
 function createPersonalInfoHeader(personalInfo: any): Paragraph[] {
   const paragraphs: Paragraph[] = [];
 
+  // Use consistent formatting constants
+  const FONT_FAMILY = "Calibri";
+  const FONTS = {
+    NAME: 32,           // 16pt - Name header
+    CONTACT: 20,        // 10pt - Contact info
+    LINKEDIN: 18        // 9pt - LinkedIn
+  };
+
+  const COLORS = {
+    PRIMARY: "1F4E79",   // Dark blue for headers
+    MUTED: "666666"      // Gray for contact info
+  };
+
   // Add full name as header
   if (personalInfo.firstName || personalInfo.lastName) {
     const fullName = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim();
@@ -274,9 +345,9 @@ function createPersonalInfoHeader(personalInfo: any): Paragraph[] {
           new TextRun({
             text: fullName,
             bold: true,
-            size: 32,
-            color: "1F4E79",
-            font: "Calibri"
+            size: FONTS.NAME,
+            color: COLORS.PRIMARY,
+            font: FONT_FAMILY
           })
         ],
         alignment: AlignmentType.CENTER,
@@ -297,9 +368,9 @@ function createPersonalInfoHeader(personalInfo: any): Paragraph[] {
         children: [
           new TextRun({
             text: contactParts.join(' | '),
-            size: 20,
-            color: "666666",
-            font: "Calibri"
+            size: FONTS.CONTACT,
+            color: COLORS.MUTED,
+            font: FONT_FAMILY
           })
         ],
         alignment: AlignmentType.CENTER,
@@ -315,9 +386,9 @@ function createPersonalInfoHeader(personalInfo: any): Paragraph[] {
         children: [
           new TextRun({
             text: `LinkedIn: ${personalInfo.linkedin}`,
-            size: 18,
-            color: "666666",
-            font: "Calibri"
+            size: FONTS.LINKEDIN,
+            color: COLORS.MUTED,
+            font: FONT_FAMILY
           })
         ],
         alignment: AlignmentType.CENTER,
