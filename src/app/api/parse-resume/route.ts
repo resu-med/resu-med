@@ -20,15 +20,61 @@ export async function POST(request: NextRequest) {
     // Parse based on file type
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
       try {
+        console.log('📄 Starting PDF parsing for:', file.name, 'Size:', file.size, 'bytes');
+
         // Dynamic import to avoid Next.js issues with pdf-parse
         const pdf = (await import('pdf-parse')).default;
-        const pdfData = await pdf(buffer);
+
+        // Add PDF parsing options for better compatibility
+        const options = {
+          // Increase max buffer size for large PDFs
+          max: 0,
+        };
+
+        const pdfData = await pdf(buffer, options);
         text = pdfData.text;
+
         console.log('✅ Successfully parsed PDF file:', file.name);
-      } catch (error) {
-        console.error('PDF parsing error:', error);
+        console.log('📊 Extracted text length:', text.length, 'characters');
+        console.log('📑 PDF info - Pages:', pdfData.numpages, 'Version:', pdfData.version);
+
+        // Check if we got meaningful text
+        if (!text || text.trim().length < 10) {
+          console.warn('⚠️ PDF parsed but very little text extracted. May be image-based PDF.');
+          return NextResponse.json(
+            {
+              error: 'PDF appears to contain mostly images or no readable text. Please try converting to DOCX format or use a text-based PDF.',
+              details: 'Only ' + text.trim().length + ' characters of text were extracted.'
+            },
+            { status: 400 }
+          );
+        }
+
+      } catch (error: any) {
+        console.error('PDF parsing error details:', error);
+        console.error('Error name:', error?.name);
+        console.error('Error message:', error?.message);
+
+        // More specific error messages based on error type
+        let errorMessage = 'Failed to parse PDF file. ';
+        const errorMsg = error?.message || '';
+
+        if (errorMsg.includes('Invalid PDF')) {
+          errorMessage += 'The file appears to be corrupted or not a valid PDF.';
+        } else if (errorMsg.includes('password')) {
+          errorMessage += 'The PDF is password-protected.';
+        } else if (errorMsg.includes('encrypted')) {
+          errorMessage += 'The PDF is encrypted and cannot be read.';
+        } else {
+          errorMessage += 'Please try converting to DOCX format or use a different PDF file.';
+        }
+
         return NextResponse.json(
-          { error: 'Failed to parse PDF file. The file may be corrupted or password-protected. Please try converting to DOCX format.' },
+          {
+            error: errorMessage,
+            details: errorMsg,
+            suggestion: 'Try converting your resume to DOCX format for better compatibility.'
+          },
           { status: 500 }
         );
       }
