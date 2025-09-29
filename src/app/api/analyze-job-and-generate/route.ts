@@ -218,12 +218,20 @@ async function generateWithOpenAI(jobDescription: string, jobTitle: string, comp
        - Format as: EXACT Job Title, EXACT Company Name | Location, Start Date - End Date
        - NO markdown formatting (no ** or * characters)
        - Include full employment dates (month/year format)
-       - Write compelling bullet points (4-6 per role for most recent, 2-3 for older roles)
+       - Write compelling bullet points (5-7 per role for most recent, 3-4 for older roles)
        - Start each bullet with strong action verbs
+       - EXPAND on basic descriptions with detailed, role-specific achievements
+       - For management roles: include team leadership, process improvements, strategic initiatives
+       - For technical roles: include system optimizations, technology implementations, problem-solving
+       - For sales roles: include relationship building, target achievement, market analysis
+       - For healthcare roles: include patient care, compliance, quality improvements
+       - For education roles: include curriculum development, student outcomes, innovative methods
        - Quantify achievements with specific metrics where possible
        - Highlight responsibilities that align with target role
        - Use keywords from job description naturally
        - Show progression and growth throughout entire career
+       - Add professional accomplishments that demonstrate expertise and value
+       - Include collaborative achievements and cross-functional contributions
        - List most recent experience FIRST, then ALL previous roles chronologically
        - CRITICAL: Do NOT change job titles to match target role
        - CRITICAL: Include ALL roles regardless of age - complete career timeline
@@ -659,12 +667,8 @@ function generateTailoredResume(profile: UserProfile, jobTitle: string, companyN
           'Applied technical expertise to solve complex challenges and improve processes'
         ];
 
-    // Add 2-3 more detailed achievements for recent roles
-    const additionalAchievements = index < 2 ? [
-      `Successfully implemented solutions using ${(analysis.requiredSkills && analysis.requiredSkills.length > 0) ? analysis.requiredSkills.slice(0, 2).join(' and ') : 'modern'} technologies`,
-      `Contributed to ${(analysis.keyRequirements && analysis.keyRequirements.length > 0) ? analysis.keyRequirements[0].toLowerCase() : 'project objectives'} with measurable impact on team productivity`,
-      `Demonstrated expertise in ${(analysis.responsibilities && analysis.responsibilities.length > 0) ? analysis.responsibilities[0].toLowerCase() : 'key responsibilities'} while maintaining high quality standards`
-    ] : [];
+    // Add more detailed, role-specific achievements for recent roles
+    const additionalAchievements = index < 2 ? generateRoleSpecificAchievements(exp, analysis, jobTitle) : [];
 
     const allAchievements = [...baseAchievements, ...additionalAchievements];
 
@@ -860,6 +864,124 @@ ${qualificationMatch}
 ${valueProposition}
 
 ${confidentClose}`;
+}
+
+function generateRoleSpecificAchievements(exp: any, analysis: JobAnalysis, targetJobTitle: string): string[] {
+  const achievements = [];
+  const role = (exp.jobTitle || exp.position || '').toLowerCase();
+  const company = exp.company || '';
+  const targetRole = targetJobTitle.toLowerCase();
+
+  // Base achievements that can be tailored to specific role types
+  const achievementTemplates = {
+    technical: [
+      `Optimized system performance and reliability through implementation of best practices and monitoring`,
+      `Collaborated with stakeholders to gather requirements and deliver solutions meeting business objectives`,
+      `Maintained high code quality standards through peer reviews, testing, and documentation practices`,
+      `Contributed to architectural decisions and technical strategy for scalable solutions`
+    ],
+    management: [
+      `Led cross-functional initiatives and coordinated resources to achieve project milestones`,
+      `Mentored team members and fostered professional development within the organization`,
+      `Streamlined operational processes resulting in improved efficiency and reduced delivery times`,
+      `Managed stakeholder relationships and facilitated communication across multiple departments`
+    ],
+    sales: [
+      `Exceeded quarterly targets through strategic client engagement and relationship building`,
+      `Developed comprehensive market analysis and competitive intelligence for strategic planning`,
+      `Built and maintained strong client relationships resulting in repeat business and referrals`,
+      `Collaborated with internal teams to ensure client requirements were met and exceeded`
+    ],
+    marketing: [
+      `Executed comprehensive marketing campaigns across multiple channels to drive brand awareness`,
+      `Analyzed campaign performance metrics and optimized strategies for improved ROI`,
+      `Collaborated with creative teams to develop compelling content and messaging`,
+      `Managed marketing budgets and vendor relationships to maximize campaign effectiveness`
+    ],
+    finance: [
+      `Prepared detailed financial reports and analysis supporting strategic business decisions`,
+      `Implemented cost control measures and budget monitoring processes across departments`,
+      `Ensured compliance with financial regulations and internal audit requirements`,
+      `Collaborated with leadership to develop forecasting models and financial projections`
+    ],
+    operations: [
+      `Optimized operational workflows and processes to increase efficiency and reduce costs`,
+      `Implemented quality assurance protocols ensuring consistent service delivery standards`,
+      `Coordinated with multiple departments to streamline operations and improve customer satisfaction`,
+      `Managed vendor relationships and supply chain logistics for optimal operational performance`
+    ],
+    education: [
+      `Developed comprehensive curricula and educational materials aligned with learning objectives`,
+      `Implemented innovative teaching methods and assessment strategies for improved student outcomes`,
+      `Collaborated with colleagues and administration to enhance educational programs and standards`,
+      `Mentored students and provided guidance supporting their academic and professional development`
+    ],
+    healthcare: [
+      `Delivered high-quality patient care while maintaining strict adherence to safety protocols`,
+      `Collaborated with multidisciplinary teams to develop and implement comprehensive care plans`,
+      `Maintained detailed patient records and documentation in compliance with regulatory requirements`,
+      `Participated in quality improvement initiatives to enhance patient outcomes and satisfaction`
+    ],
+    consulting: [
+      `Analyzed client business processes and provided strategic recommendations for improvement`,
+      `Delivered comprehensive project solutions within scope, timeline, and budget constraints`,
+      `Facilitated stakeholder workshops and requirements gathering sessions for project clarity`,
+      `Maintained strong client relationships through effective communication and value delivery`
+    ]
+  };
+
+  // Determine achievement category based on role keywords
+  let category = 'technical'; // default
+
+  if (role.includes('manager') || role.includes('director') || role.includes('lead') || role.includes('head')) {
+    category = 'management';
+  } else if (role.includes('sales') || role.includes('account') || role.includes('business development')) {
+    category = 'sales';
+  } else if (role.includes('marketing') || role.includes('brand') || role.includes('digital marketing')) {
+    category = 'marketing';
+  } else if (role.includes('finance') || role.includes('accounting') || role.includes('financial')) {
+    category = 'finance';
+  } else if (role.includes('operations') || role.includes('logistics') || role.includes('supply')) {
+    category = 'operations';
+  } else if (role.includes('teacher') || role.includes('instructor') || role.includes('professor') || role.includes('education')) {
+    category = 'education';
+  } else if (role.includes('nurse') || role.includes('doctor') || role.includes('medical') || role.includes('healthcare')) {
+    category = 'healthcare';
+  } else if (role.includes('consultant') || role.includes('advisor') || role.includes('analyst')) {
+    category = 'consulting';
+  }
+
+  // Select 3-4 appropriate achievements for the role
+  const templates = achievementTemplates[category] || achievementTemplates.technical;
+  achievements.push(...templates.slice(0, 3));
+
+  // Add role-specific technical skills if they match job requirements
+  if (analysis.requiredSkills && analysis.requiredSkills.length > 0) {
+    const relevantSkills = analysis.requiredSkills.slice(0, 3);
+    if (relevantSkills.length > 0) {
+      achievements.push(`Applied expertise in ${relevantSkills.join(', ')} to deliver innovative solutions and support organizational goals`);
+    }
+  }
+
+  // Add industry-specific achievement if relevant
+  if (analysis.industryType && analysis.industryType !== 'Technology') {
+    const industrySpecific = {
+      'Healthcare': 'Contributed to patient care excellence and healthcare quality improvement initiatives',
+      'Finance': 'Supported financial compliance and risk management through detailed analysis and reporting',
+      'Education': 'Enhanced educational outcomes through innovative approaches and collaborative teaching methods',
+      'Marketing': 'Drove brand engagement and customer acquisition through strategic marketing initiatives',
+      'Manufacturing': 'Optimized production processes and quality control measures for improved operational efficiency',
+      'Retail': 'Enhanced customer experience and sales performance through strategic customer engagement',
+      'Consulting': 'Delivered strategic insights and actionable recommendations supporting client business objectives'
+    };
+
+    const industryAchievement = industrySpecific[analysis.industryType];
+    if (industryAchievement) {
+      achievements.push(industryAchievement);
+    }
+  }
+
+  return achievements.slice(0, 4); // Return 3-4 achievements
 }
 
 function getRoleSummary(jobTitle: string, experience: any[], analysis: JobAnalysis): string {
