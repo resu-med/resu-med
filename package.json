@@ -26,6 +26,8 @@
     "nodemailer": "^7.0.6",
     "openai": "^5.23.0",
     "pdf-parse": "^1.1.1",
+    "pdf2pic": "^3.2.0",
+    "pdfjs-dist": "^5.4.149",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-dropzone": "^14.3.8",
