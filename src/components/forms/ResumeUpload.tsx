@@ -17,35 +17,66 @@ async function parseClientPDF(file: File): Promise<string> {
   try {
     console.log('🔄 Starting client-side PDF parsing...');
 
-    // Dynamic import to avoid SSR issues
-    const { pdfjs } = await import('react-pdf');
+    // Use pdfjs-dist directly instead of react-pdf for better compatibility
+    const pdfjs = await import('pdfjs-dist');
 
-    // Set up PDF.js worker
-    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-    }
+    // Try multiple worker sources for better reliability
+    const workerSources = [
+      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js`,
+      `https://unpkg.com/pdfjs-dist@4.8.69/build/pdf.worker.min.js`,
+      `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.js`
+    ];
+
+    pdfjs.GlobalWorkerOptions.workerSrc = workerSources[0];
+    console.log('🔧 PDF.js worker configured:', pdfjs.GlobalWorkerOptions.workerSrc);
 
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    console.log('📁 PDF file loaded into memory, size:', arrayBuffer.byteLength, 'bytes');
 
-    console.log('📑 PDF loaded, pages:', pdf.numPages);
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    console.log('📑 PDF document loaded successfully, pages:', pdf.numPages);
+
     let text = '';
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      text += pageText + '\n';
-      console.log(`📄 Processed page ${pageNum}/${pdf.numPages}`);
+      try {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str || '')
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (pageText) {
+          text += pageText + '\n';
+        }
+        console.log(`📄 Processed page ${pageNum}/${pdf.numPages} - ${pageText.length} characters`);
+      } catch (pageError) {
+        console.warn(`⚠️ Failed to process page ${pageNum}:`, pageError);
+        // Continue with other pages
+      }
     }
 
-    console.log('✅ Client-side PDF parsing completed, text length:', text.length);
-    return text.trim();
+    const finalText = text.trim();
+    console.log('✅ Client-side PDF parsing completed, total text length:', finalText.length);
+
+    if (finalText.length < 50) {
+      throw new Error('PDF appears to contain mostly images or no readable text. Very little text was extracted.');
+    }
+
+    return finalText;
   } catch (error: any) {
     console.error('❌ Client-side PDF parsing failed:', error);
-    throw new Error(`Client PDF parsing failed: ${error.message}`);
+
+    // Provide more specific error messages
+    if (error.message.includes('worker')) {
+      throw new Error('PDF processing failed due to worker loading issues. Please try converting your resume to DOCX format.');
+    } else if (error.message.includes('Invalid PDF')) {
+      throw new Error('This PDF file appears to be corrupted or password-protected. Please try a different PDF or convert to DOCX format.');
+    } else {
+      throw new Error(`PDF processing failed: ${error.message}`);
+    }
   }
 }
 
