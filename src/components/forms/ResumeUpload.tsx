@@ -6,6 +6,39 @@ import { useProfile } from '@/contexts/ProfileContext';
 import { FileParser } from '@/lib/fileParser';
 import { SmartResumeParser } from '@/lib/smartResumeParser';
 import ProfileHealthCheck from '@/components/ProfileHealthCheck';
+// @ts-ignore - react-pdf types might not be perfect
+import { pdfjs } from 'react-pdf';
+
+// Set up PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+
+// Client-side PDF parsing function
+async function parseClientPDF(file: File): Promise<string> {
+  try {
+    console.log('🔄 Starting client-side PDF parsing...');
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+
+    console.log('📑 PDF loaded, pages:', pdf.numPages);
+    let text = '';
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      text += pageText + '\n';
+      console.log(`📄 Processed page ${pageNum}/${pdf.numPages}`);
+    }
+
+    console.log('✅ Client-side PDF parsing completed, text length:', text.length);
+    return text.trim();
+  } catch (error: any) {
+    console.error('❌ Client-side PDF parsing failed:', error);
+    throw new Error(`Client PDF parsing failed: ${error.message}`);
+  }
+}
 
 export default function ResumeUpload() {
   const { state: profileState, dispatch } = useProfile();
@@ -32,23 +65,65 @@ export default function ResumeUpload() {
     setUploadStatus({ type: 'info', message: 'Parsing your resume...' });
 
     try {
-      // Parse the file content using the enhanced API
-      setUploadStatus({ type: 'info', message: 'Extracting text from your resume...' });
+      let text = '';
+      let parsedData = null;
 
-      const formData = new FormData();
-      formData.append('file', file);
+      // Handle different file types
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        // Use client-side PDF parsing
+        setUploadStatus({ type: 'info', message: 'Processing PDF on your device...' });
+        try {
+          text = await parseClientPDF(file);
+          setUploadStatus({ type: 'info', message: 'PDF processed successfully! Running AI analysis...' });
+        } catch (pdfError: any) {
+          console.error('Client PDF parsing failed:', pdfError);
+          setUploadStatus({
+            type: 'error',
+            message: `Failed to process PDF: ${pdfError.message}. Please try converting to DOCX format.`
+          });
+          return;
+        }
+      } else {
+        // For non-PDF files, use the existing server-side API
+        setUploadStatus({ type: 'info', message: 'Processing your resume...' });
 
-      const response = await fetch('/api/parse-resume', {
-        method: 'POST',
-        body: formData,
-      });
+        const formData = new FormData();
+        formData.append('file', file);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to parse resume');
+        const response = await fetch('/api/parse-resume', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to parse resume');
+        }
+
+        const result = await response.json();
+        text = result.text;
+        parsedData = result.parsedData;
       }
 
-      const { text, parsedData } = await response.json();
+      // If we have text but no parsed data (from client-side PDF), run AI parsing
+      if (text && !parsedData) {
+        setUploadStatus({ type: 'info', message: 'Running AI analysis on extracted text...' });
+
+        const aiResponse = await fetch('/api/ai-parse-text', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text, filename: file.name }),
+        });
+
+        if (aiResponse.ok) {
+          const aiResult = await aiResponse.json();
+          parsedData = aiResult.parsedData;
+        } else {
+          console.warn('AI parsing failed, continuing with plain text');
+        }
+      }
 
       if (!text || text.trim().length < 50) {
         setUploadStatus({
@@ -58,7 +133,7 @@ export default function ResumeUpload() {
         return;
       }
 
-      setUploadStatus({ type: 'info', message: 'AI analysis complete!' });
+      setUploadStatus({ type: 'info', message: 'AI analysis complete! Processing data...' });
 
       console.log('🎯 PARSED DATA STRUCTURE:', parsedData);
       console.log('🎯 EXPERIENCE DATA:', parsedData.experience);
@@ -332,10 +407,11 @@ export default function ResumeUpload() {
       <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
         <h4 className="font-medium text-teal-900 mb-2">📋 Important Notes</h4>
         <ul className="text-sm text-teal-800 space-y-1">
-          <li>• ✅ <strong>Full PDF support</strong> - Upload PDFs directly with intelligent text extraction</li>
+          <li>• ✅ <strong>Client-side PDF processing</strong> - PDFs are processed securely on your device</li>
+          <li>• ✅ <strong>Privacy-first</strong> - PDF content never leaves your browser during text extraction</li>
           <li>• Always review imported data for accuracy after upload</li>
-          <li>• Your uploaded file is processed securely and not stored</li>
           <li>• Supports complex resume formats with AI-powered analysis</li>
+          <li>• Only extracted text is sent to our AI for structured data parsing</li>
         </ul>
       </div>
 
