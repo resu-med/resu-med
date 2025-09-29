@@ -186,7 +186,26 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
             <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <div className="flex items-center space-x-6">
+                <a
+                  href="/"
+                  className="flex items-center space-x-2 text-purple-600 hover:text-purple-800 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 2L3 7v11a2 2 0 002 2h10a2 2 0 002-2V7l-7-5zM10 18V8h6v10H10z" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                    <span className="text-xl font-bold">ResuMed</span>
+                  </div>
+                  <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                </a>
+                <div className="h-8 w-px bg-gray-300"></div>
+                <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              </div>
               <div className="text-sm text-gray-500">
                 Welcome, {state.user.name}
               </div>
