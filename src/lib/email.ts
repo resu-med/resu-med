@@ -1,13 +1,13 @@
 import nodemailer from 'nodemailer';
 
-// Initialize Microsoft 365 SMTP transporter
+// Initialize Microsoft 365 SMTP transporter (as directed by GoDaddy)
 const getEmailTransporter = () => {
   if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
     return null;
   }
 
   return nodemailer.createTransport({
-    host: 'smtpout.secureserver.net',
+    host: 'smtp.office365.com',
     port: 587,
     secure: false,
     auth: {
@@ -15,7 +15,7 @@ const getEmailTransporter = () => {
       pass: process.env.SMTP_PASSWORD,
     },
     tls: {
-      rejectUnauthorized: false
+      ciphers: 'SSLv3'
     }
   });
 };
@@ -262,8 +262,8 @@ export function createWelcomeEmail(name: string, isAdmin: boolean = false) {
         </div>
 
         <div class="cta">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://resu-med.com'}/profile" class="button">
-            Start Building Your Resume
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://resu-med.com'}/auth" class="button">
+            Get Started - Sign In
           </a>
         </div>
 
@@ -301,7 +301,7 @@ What you can do with ResuMed:
 ✓ Export your resume in multiple formats (PDF, DOCX)
 ✓ Track your applications and career progress
 
-Ready to get started? Visit ${process.env.NEXT_PUBLIC_APP_URL || 'https://resu-med.com'}/profile to access your profile and begin building your professional resume.
+Ready to get started? Visit ${process.env.NEXT_PUBLIC_APP_URL || 'https://resu-med.com'}/auth to sign in and begin building your professional resume.
 
 Need help? Reply to this email or visit our help center at ${process.env.NEXT_PUBLIC_APP_URL || 'https://resu-med.com'}/help.
 

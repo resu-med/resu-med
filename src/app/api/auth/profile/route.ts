@@ -1,119 +1,121 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql, initializeDatabase } from '@/lib/database';
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { sql, initializeDatabase } from '@/lib/database';
+
+interface JWTPayload {
+  userId: number;
+  email: string;
+  iat: number;
+  exp: number;
+}
 
 export async function PUT(request: NextRequest) {
   try {
-    if (!sql) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
+    await initializeDatabase();
 
-    // Verify authentication
+    // Get authorization header
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.substring(7);
-    let userId: number;
 
+    // Verify JWT token
+    let decoded: JWTPayload;
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      userId = decoded.userId;
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as JWTPayload;
     } catch (error) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    await initializeDatabase();
-
-    const { name, email, currentPassword, newPassword } = await request.json();
+    const body = await request.json();
+    const { name, email, currentPassword, newPassword } = body;
 
     // Validate required fields
     if (!name || !email) {
-      return NextResponse.json({
-        error: 'Name and email are required'
-      }, { status: 400 });
+      return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
     }
 
-    // Check if email is already taken by another user
-    const existingUser = await sql`
-      SELECT id FROM users
-      WHERE email = ${email.toLowerCase()} AND id != ${userId}
+    // Get current user
+    const userResult = await sql`
+      SELECT id, email, name, password
+      FROM users
+      WHERE id = ${decoded.userId}
     `;
 
-    if (existingUser.length > 0) {
-      return NextResponse.json({
-        error: 'Email is already taken'
-      }, { status: 400 });
-    }
-
-    // If password change is requested, verify current password
-    let passwordUpdate = {};
-    if (newPassword) {
-      if (!currentPassword) {
-        return NextResponse.json({
-          error: 'Current password is required to set a new password'
-        }, { status: 400 });
-      }
-
-      // Get current password hash
-      const userResult = await sql`
-        SELECT password_hash FROM users WHERE id = ${userId}
-      `;
-
-      if (userResult.length === 0) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-
-      // Verify current password
-      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, userResult[0].password_hash);
-      if (!isCurrentPasswordValid) {
-        return NextResponse.json({
-          error: 'Current password is incorrect'
-        }, { status: 400 });
-      }
-
-      // Hash new password
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-      passwordUpdate = { password_hash: hashedPassword };
-    }
-
-    // Update user profile
-    const updatedUser = await sql`
-      UPDATE users
-      SET
-        name = ${name},
-        email = ${email.toLowerCase()},
-        ${passwordUpdate.password_hash ? sql`password_hash = ${passwordUpdate.password_hash},` : sql``}
-        updated_at = NOW()
-      WHERE id = ${userId}
-      RETURNING id, email, name, email_verified, is_admin, created_at, updated_at
-    `;
-
-    if (updatedUser.length === 0) {
+    if (userResult.rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const user = updatedUser[0];
+    const user = userResult.rows[0];
+
+    // If password change is requested
+    if (newPassword) {
+      if (!currentPassword) {
+        return NextResponse.json({ error: 'Current password is required to change password' }, { status: 400 });
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!isValidPassword) {
+        return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
+      }
+
+      // Validate new password
+      if (newPassword.length < 8) {
+        return NextResponse.json({ error: 'New password must be at least 8 characters long' }, { status: 400 });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+      // Update user with new password
+      await sql`
+        UPDATE users
+        SET name = ${name}, email = ${email.toLowerCase()}, password = ${hashedPassword}, updated_at = NOW()
+        WHERE id = ${decoded.userId}
+      `;
+    } else {
+      // Update user without password change
+      await sql`
+        UPDATE users
+        SET name = ${name}, email = ${email.toLowerCase()}, updated_at = NOW()
+        WHERE id = ${decoded.userId}
+      `;
+    }
+
+    // Get updated user data
+    const updatedUserResult = await sql`
+      SELECT id, email, name, email_verified, is_admin, created_at, updated_at
+      FROM users
+      WHERE id = ${decoded.userId}
+    `;
+
+    const updatedUser = updatedUserResult.rows[0];
+
+    console.log('✅ Profile updated successfully for:', updatedUser.email);
 
     return NextResponse.json({
       success: true,
+      message: 'Profile updated successfully',
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        emailVerified: user.email_verified,
-        isAdmin: user.is_admin,
-        createdAt: user.created_at
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        emailVerified: updatedUser.email_verified,
+        isAdmin: updatedUser.is_admin,
+        createdAt: updatedUser.created_at,
+        updatedAt: updatedUser.updated_at
       }
     });
 
   } catch (error) {
     console.error('Profile update error:', error);
-    return NextResponse.json({
-      error: 'Internal server error'
-    }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update profile' },
+      { status: 500 }
+    );
   }
 }

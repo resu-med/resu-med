@@ -78,6 +78,11 @@ export default function AccountPage() {
       });
 
       setSuccess('Profile updated successfully');
+
+      // Force a small delay then refresh to ensure all components update
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update profile');
     } finally {

@@ -24,7 +24,9 @@
       "WebFetch(domain:rapidapi.com)",
       "Bash(git config:*)",
       "WebFetch(domain:www.cv-library.co.uk)",
-      "WebFetch(domain:apitracker.io)"
+      "WebFetch(domain:apitracker.io)",
+      "Bash(echo:*)",
+      "Bash(printf:*)"
     ],
     "deny": [],
     "ask": []
