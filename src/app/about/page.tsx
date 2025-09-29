@@ -14,7 +14,7 @@ export default function AboutPage() {
             About ResuMed
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Empowering healthcare professionals to accelerate their career journey through innovative, tailored solutions.
+            Empowering job seekers to accelerate their career journey with AI-powered tools for creating tailored resumes and cover letters.
           </p>
         </div>
 
@@ -29,7 +29,7 @@ export default function AboutPage() {
             <h2 className="text-3xl font-bold text-gray-900">Our Mission</h2>
           </div>
           <p className="text-lg text-gray-700 leading-relaxed">
-            We are dedicated to helping healthcare professionals speed up their job hunting process with tailored products that understand the unique demands of the medical field. Our platform transforms the traditional resume and job search experience into a streamlined, intelligent system that connects talented professionals with their ideal opportunities faster than ever before.
+            We are dedicated to helping job seekers speed up their application process with AI-powered tools that create bespoke, tailored resumes and cover letters. Our platform transforms the traditional job search experience into a streamlined, intelligent system that helps professionals across all industries apply for roles quicker and more effectively than ever before.
           </p>
         </div>
 
@@ -49,7 +49,7 @@ export default function AboutPage() {
                 <h3 className="text-xl font-bold text-gray-900">Courage</h3>
               </div>
               <p className="text-gray-700">
-                We empower healthcare professionals to take bold steps in their careers, providing the tools and confidence needed to pursue opportunities that align with their aspirations and make a meaningful impact in patient care.
+                We empower job seekers to take bold steps in their careers, providing AI-powered tools and the confidence needed to pursue opportunities that align with their aspirations and help them stand out in competitive job markets.
               </p>
             </div>
 
@@ -64,7 +64,7 @@ export default function AboutPage() {
                 <h3 className="text-xl font-bold text-gray-900">Resilience</h3>
               </div>
               <p className="text-gray-700">
-                We understand the challenges of healthcare careers and build robust solutions that adapt to changing market conditions, helping professionals navigate setbacks and emerge stronger in their job search journey.
+                We understand the challenges of job searching across all industries and build robust AI solutions that adapt to changing market conditions, helping professionals navigate setbacks and emerge stronger in their career journey.
               </p>
             </div>
 
@@ -79,7 +79,7 @@ export default function AboutPage() {
                 <h3 className="text-xl font-bold text-gray-900">Partnership</h3>
               </div>
               <p className="text-gray-700">
-                We believe in collaborative relationships with healthcare professionals, institutions, and employers. Our success is measured by the meaningful connections we facilitate and the lasting partnerships we build within the medical community.
+                We believe in collaborative relationships with job seekers, employers, and career professionals across all industries. Our success is measured by the meaningful connections we facilitate and the successful placements we help achieve through our AI-powered platform.
               </p>
             </div>
 
@@ -94,7 +94,7 @@ export default function AboutPage() {
                 <h3 className="text-xl font-bold text-gray-900">Innovation</h3>
               </div>
               <p className="text-gray-700">
-                We continuously evolve our platform with cutting-edge technology, AI-powered insights, and user-centered design to create breakthrough solutions that revolutionize how healthcare professionals approach their career development.
+                We continuously evolve our platform with cutting-edge AI technology, intelligent resume optimization, and user-centered design to create breakthrough solutions that revolutionize how professionals create tailored applications and approach their job search.
               </p>
             </div>
 
@@ -105,7 +105,7 @@ export default function AboutPage() {
         <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-2xl shadow-xl p-8 text-center text-white">
           <h2 className="text-3xl font-bold mb-4">Join Our Mission</h2>
           <p className="text-xl mb-6 opacity-90">
-            Ready to accelerate your healthcare career with innovative, tailored solutions?
+            Ready to accelerate your job search with AI-powered, tailored resume and cover letter creation?
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
