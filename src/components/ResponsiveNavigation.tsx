@@ -88,9 +88,9 @@ export default function ResponsiveNavigation({
                 )}
               </>
             )}
-            <button className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
+            <Link href="/about" className="text-gray-600 hover:text-teal-600 font-medium transition-colors">
               About
-            </button>
+            </Link>
 
             {authState.isAuthenticated ? (
               <AccountDropdown />
@@ -153,9 +153,9 @@ export default function ResponsiveNavigation({
                       Admin Dashboard
                     </Link>
                   )}
-                  <button className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-teal-600 hover:bg-teal-50">
+                  <Link href="/about" className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-teal-600 hover:bg-teal-50" onClick={closeMobileMenu}>
                     About
-                  </button>
+                  </Link>
 
                   {/* Mobile Account Section */}
                   <div className="border-t border-gray-200 pt-4 pb-3">
@@ -197,9 +197,9 @@ export default function ResponsiveNavigation({
                 </>
               ) : (
                 <>
-                  <button className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-teal-600 hover:bg-teal-50">
+                  <Link href="/about" className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-teal-600 hover:bg-teal-50" onClick={closeMobileMenu}>
                     About
-                  </button>
+                  </Link>
                   <Link href="/auth" className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-teal-600 hover:bg-teal-50" onClick={closeMobileMenu}>
                     Sign In
                   </Link>
