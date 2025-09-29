@@ -37,8 +37,9 @@ function AuthPageContent() {
     e.preventDefault();
     clearError();
     await login(loginForm);
-    if (!state.error) {
-      router.push('/profile');
+    if (!state.error && state.user) {
+      // Redirect admins to admin dashboard, regular users to profile
+      router.push(state.user.isAdmin ? '/admin' : '/profile');
     }
   };
 
@@ -46,8 +47,9 @@ function AuthPageContent() {
     e.preventDefault();
     clearError();
     await signup(signupForm);
-    if (!state.error) {
-      router.push('/profile');
+    if (!state.error && state.user) {
+      // Redirect admins to admin dashboard, regular users to profile
+      router.push(state.user.isAdmin ? '/admin' : '/profile');
     }
   };
 

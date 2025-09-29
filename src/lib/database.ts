@@ -113,6 +113,20 @@ export async function initializeDatabase() {
       )
     `;
 
+    // Create API usage tracking table
+    await sql`
+      CREATE TABLE IF NOT EXISTS api_usage (
+        id SERIAL PRIMARY KEY,
+        api_name VARCHAR(100) NOT NULL,
+        endpoint VARCHAR(255),
+        request_count INTEGER DEFAULT 0,
+        last_reset_date DATE DEFAULT CURRENT_DATE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(api_name, last_reset_date)
+      )
+    `;
+
     console.log('✅ Database tables initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

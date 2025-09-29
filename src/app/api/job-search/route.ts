@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { JobListing } from '@/types/profile';
+import { trackAPIUsage } from '@/lib/api-usage-tracker';
 
 interface JobSearchFilters {
   keywords: string;
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
 async function searchJSearchJobs(filters: JobSearchFilters): Promise<JobListing[]> {
   try {
     console.log('🚀 Searching JSearch API (RapidAPI)...');
+    await trackAPIUsage('RapidAPI-JSearch', 'search');
 
     const searchParams = {
       query: filters.keywords,
@@ -367,6 +369,7 @@ async function searchMuseJobs(filters: JobSearchFilters): Promise<JobListing[]> 
 async function searchArbeitnowJobs(filters: JobSearchFilters): Promise<JobListing[]> {
   try {
     console.log('🇪🇺 Searching Arbeitnow API...');
+    await trackAPIUsage('Arbeitnow', 'search');
 
     const params = new URLSearchParams({
       query: filters.keywords
@@ -514,6 +517,7 @@ async function searchAngelListJobs(filters: JobSearchFilters): Promise<JobListin
 async function searchReedJobs(filters: JobSearchFilters): Promise<JobListing[]> {
   try {
     console.log('🇬🇧 Searching Reed API...');
+    await trackAPIUsage('Reed', 'search');
 
     const params = new URLSearchParams({
       keywords: filters.keywords,
@@ -565,6 +569,7 @@ async function searchReedJobs(filters: JobSearchFilters): Promise<JobListing[]> 
 async function searchAdzunaJobs(filters: JobSearchFilters): Promise<JobListing[]> {
   try {
     console.log('🌐 Searching Adzuna API...');
+    await trackAPIUsage('Adzuna', 'search');
 
     const params = new URLSearchParams({
       app_id: process.env.ADZUNA_APP_ID!,

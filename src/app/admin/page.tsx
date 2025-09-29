@@ -4,6 +4,33 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
+interface UserStats {
+  total_users: number;
+  new_users_today: number;
+  new_users_this_week: number;
+  verified_users: number;
+  admin_users: number;
+  active_users_last_30_days: number;
+}
+
+interface APIStatus {
+  name: string;
+  used: number;
+  limit: number;
+  percentage: number;
+  cost_per_request: number;
+  reset_period: string;
+  status: 'safe' | 'warning' | 'danger';
+  daily_cost: number;
+}
+
+interface APIUsageSummary {
+  total_requests_today: number;
+  total_cost_today: number;
+  apis_at_risk: number;
+  apis_warning: number;
+}
+
 interface User {
   id: number;
   email: string;
@@ -12,28 +39,19 @@ interface User {
   is_admin: boolean;
   last_login_at: string | null;
   created_at: string;
-  updated_at: string;
-}
-
-interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
 }
 
 export default function AdminDashboard() {
   const { state } = useAuth();
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    page: 1,
-    limit: 20,
-    total: 0,
-    totalPages: 0
-  });
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'api-usage'>('overview');
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [apiUsage, setApiUsage] = useState<{
+    summary: APIUsageSummary;
+    api_status: APIStatus[];
+  } | null>(null);
+  const [recentUsers, setRecentUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // Check if user is admin
@@ -46,41 +64,47 @@ export default function AdminDashboard() {
     }
   }, [state.isAuthenticated, state.user?.isAdmin, state.isLoading, router]);
 
-  // Fetch users
-  const fetchUsers = async (page: number = 1, searchTerm: string = '') => {
+  // Fetch dashboard data
+  const fetchDashboardData = async () => {
     if (!state.token) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.limit.toString()
-      });
+      const [dashboardResponse, apiUsageResponse] = await Promise.all([
+        fetch('/api/admin/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${state.token}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch('/api/admin/api-usage', {
+          headers: {
+            'Authorization': `Bearer ${state.token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      ]);
 
-      if (searchTerm) {
-        params.append('search', searchTerm);
+      if (!dashboardResponse.ok || !apiUsageResponse.ok) {
+        throw new Error('Failed to fetch dashboard data');
       }
 
-      const response = await fetch(`/api/admin/users?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${state.token}`,
-          'Content-Type': 'application/json'
-        }
+      const [dashboardData, apiUsageData] = await Promise.all([
+        dashboardResponse.json(),
+        apiUsageResponse.json()
+      ]);
+
+      setUserStats(dashboardData.user_stats);
+      setRecentUsers(dashboardData.recent_users);
+      setApiUsage({
+        summary: apiUsageData.summary,
+        api_status: apiUsageData.api_status
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch users');
-      }
-
-      setUsers(data.users);
-      setPagination(data.pagination);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch users');
+      console.error('Error fetching dashboard data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch dashboard data');
     } finally {
       setLoading(false);
     }
@@ -88,73 +112,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (state.isAuthenticated && state.user?.isAdmin && state.token) {
-      fetchUsers();
+      fetchDashboardData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.isAuthenticated, state.user?.isAdmin, state.token]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchUsers(1, search);
-  };
-
-  const toggleAdminStatus = async (userId: number, currentStatus: boolean) => {
-    if (!state.token) return;
-
-    try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${state.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          isAdmin: !currentStatus
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update user');
-      }
-
-      // Refresh the user list
-      fetchUsers(pagination.page, search);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update user');
-    }
-  };
-
-  const deleteUser = async (userId: number) => {
-    if (!state.token || !confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${state.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ userId })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete user');
-      }
-
-      // Refresh the user list
-      fetchUsers(pagination.page, search);
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete user');
-    }
-  };
 
   if (state.isLoading || (!state.user?.isAdmin && state.isAuthenticated)) {
     return (
@@ -168,8 +129,17 @@ export default function AdminDashboard() {
   }
 
   if (!state.isAuthenticated || !state.user?.isAdmin) {
-    return null; // Will redirect in useEffect
+    return null;
   }
+
+  const getStatusColor = (status: 'safe' | 'warning' | 'danger') => {
+    switch (status) {
+      case 'safe': return 'bg-green-100 text-green-800';
+      case 'warning': return 'bg-yellow-100 text-yellow-800';
+      case 'danger': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -199,186 +169,389 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
-              <div className="text-sm text-gray-500">
-                Total Users: {pagination.total}
-              </div>
-            </div>
-
-            <form onSubmit={handleSearch} className="mt-4">
-              <div className="flex gap-4">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search users by email or name..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Search
-                </button>
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearch('');
-                      fetchUsers(1, '');
-                    }}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Login
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Joined
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                      Loading users...
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                      No users found
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => (
-                    <tr key={user.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.name}
-                          </div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col gap-1">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              user.email_verified
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {user.email_verified ? 'Verified' : 'Unverified'}
-                          </span>
-                          {user.is_admin && (
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                              Admin
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.last_login_at
-                          ? new Date(user.last_login_at).toLocaleDateString()
-                          : 'Never'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => toggleAdminStatus(user.id, user.is_admin)}
-                            disabled={user.id === state.user?.id}
-                            className={`px-3 py-1 rounded text-xs font-medium ${
-                              user.is_admin
-                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                            } ${
-                              user.id === state.user?.id
-                                ? 'opacity-50 cursor-not-allowed'
-                                : 'cursor-pointer'
-                            }`}
-                          >
-                            {user.is_admin ? 'Remove Admin' : 'Make Admin'}
-                          </button>
-                          <button
-                            onClick={() => deleteUser(user.id)}
-                            disabled={user.id === state.user?.id}
-                            className={`px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 ${
-                              user.id === state.user?.id
-                                ? 'opacity-50 cursor-not-allowed'
-                                : 'cursor-pointer'
-                            }`}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                  Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                  {pagination.total} results
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => fetchUsers(pagination.page - 1, search)}
-                    disabled={pagination.page === 1}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-3 py-1 text-sm">
-                    Page {pagination.page} of {pagination.totalPages}
-                  </span>
-                  <button
-                    onClick={() => fetchUsers(pagination.page + 1, search)}
-                    disabled={pagination.page === pagination.totalPages}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+        {/* Tab Navigation */}
+        <div className="mb-6">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'overview'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'users'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              User Management
+            </button>
+            <button
+              onClick={() => setActiveTab('api-usage')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'api-usage'
+                  ? 'border-purple-500 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              API Usage
+            </button>
+          </nav>
         </div>
+
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {userStats && (
+                <>
+                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="ml-5 w-0 flex-1">
+                          <dl>
+                            <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                            <dd className="text-lg font-medium text-gray-900">{userStats.total_users}</dd>
+                          </dl>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="ml-5 w-0 flex-1">
+                          <dl>
+                            <dt className="text-sm font-medium text-gray-500 truncate">New Today</dt>
+                            <dd className="text-lg font-medium text-gray-900">{userStats.new_users_today}</dd>
+                          </dl>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="ml-5 w-0 flex-1">
+                          <dl>
+                            <dt className="text-sm font-medium text-gray-500 truncate">Active (30d)</dt>
+                            <dd className="text-lg font-medium text-gray-900">{userStats.active_users_last_30_days}</dd>
+                          </dl>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {apiUsage && (
+                <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="p-5">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"/>
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="ml-5 w-0 flex-1">
+                        <dl>
+                          <dt className="text-sm font-medium text-gray-500 truncate">API Calls Today</dt>
+                          <dd className="text-lg font-medium text-gray-900">{apiUsage.summary.total_requests_today}</dd>
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* API Status Overview */}
+            {apiUsage && (
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">API Usage Status</h3>
+                  {apiUsage.summary.apis_at_risk > 0 && (
+                    <p className="text-sm text-red-600 mt-1">
+                      ⚠️ {apiUsage.summary.apis_at_risk} API(s) at risk of hitting limits
+                    </p>
+                  )}
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {apiUsage.api_status.map((api) => (
+                      <div key={api.name} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium text-gray-900">{api.name}</h4>
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(api.status)}`}>
+                            {api.status}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-500">Used:</span>
+                            <span className="font-medium">{api.used} / {api.limit}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full ${
+                                api.status === 'danger' ? 'bg-red-500' :
+                                api.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                              }`}
+                              style={{ width: `${Math.min(api.percentage, 100)}%` }}
+                            ></div>
+                          </div>
+                          <div className="flex justify-between text-sm text-gray-500">
+                            <span>{api.percentage}% used</span>
+                            <span>Resets: {api.reset_period}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Users */}
+            <div className="bg-white shadow rounded-lg">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">Recent Users</h3>
+              </div>
+              <div className="overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {recentUsers.map((user) => (
+                      <tr key={user.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              user.email_verified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {user.email_verified ? 'Verified' : 'Unverified'}
+                            </span>
+                            {user.is_admin && (
+                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                Admin
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">User Management</h3>
+              <p className="text-gray-600 mb-6">Manage all users, their permissions, and account status.</p>
+              <button
+                onClick={() => router.push('/admin/users')}
+                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Go to User Management
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* API Usage Tab */}
+        {activeTab === 'api-usage' && apiUsage && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">Total Requests Today</dt>
+                        <dd className="text-lg font-medium text-gray-900">{apiUsage.summary.total_requests_today}</dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">Daily Cost</dt>
+                        <dd className="text-lg font-medium text-gray-900">${apiUsage.summary.total_cost_today.toFixed(4)}</dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">APIs at Risk</dt>
+                        <dd className="text-lg font-medium text-gray-900">{apiUsage.summary.apis_at_risk}</dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="p-5">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-orange-500 rounded-md flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="ml-5 w-0 flex-1">
+                      <dl>
+                        <dt className="text-sm font-medium text-gray-500 truncate">APIs Warning</dt>
+                        <dd className="text-lg font-medium text-gray-900">{apiUsage.summary.apis_warning}</dd>
+                      </dl>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed API Status */}
+            <div className="bg-white shadow rounded-lg">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">Detailed API Usage</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Today</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reset Period</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {apiUsage.api_status.map((api) => (
+                      <tr key={api.name}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{api.name}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{api.used} / {api.limit}</div>
+                          <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                            <div
+                              className={`h-2 rounded-full ${
+                                api.status === 'danger' ? 'bg-red-500' :
+                                api.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                              }`}
+                              style={{ width: `${Math.min(api.percentage, 100)}%` }}
+                            ></div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(api.status)}`}>
+                            {api.percentage}% ({api.status})
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ${api.daily_cost.toFixed(4)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {api.reset_period}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
