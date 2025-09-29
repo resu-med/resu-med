@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { SUBSCRIPTION_PLANS } from '@/types/subscription';
+import UserManagementTab from '@/components/admin/UserManagementTab';
 
 interface UserStats {
   total_users: number;
@@ -513,20 +514,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Users Tab */}
-        {activeTab === 'users' && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">User Management</h3>
-              <p className="text-gray-600 mb-6">Manage all users, their permissions, and account status.</p>
-              <button
-                onClick={() => router.push('/admin/users')}
-                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Go to User Management
-              </button>
-            </div>
-          </div>
-        )}
+        {activeTab === 'users' && <UserManagementTab />}
 
         {/* API Usage Tab */}
         {activeTab === 'api-usage' && apiUsage && (
