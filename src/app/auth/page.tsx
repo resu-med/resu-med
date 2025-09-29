@@ -37,21 +37,21 @@ function AuthPageContent() {
     e.preventDefault();
     clearError();
     await login(loginForm);
-    if (!state.error && state.user) {
-      // Redirect admins to admin dashboard, regular users to profile
-      router.push(state.user.isAdmin ? '/admin' : '/profile');
-    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     await signup(signupForm);
-    if (!state.error && state.user) {
+  };
+
+  // Redirect on successful authentication
+  useEffect(() => {
+    if (state.isAuthenticated && state.user && !state.isLoading) {
       // Redirect admins to admin dashboard, regular users to profile
       router.push(state.user.isAdmin ? '/admin' : '/profile');
     }
-  };
+  }, [state.isAuthenticated, state.user, state.isLoading, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 flex items-center justify-center p-4">
