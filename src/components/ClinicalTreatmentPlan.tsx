@@ -174,6 +174,41 @@ export default function ClinicalTreatmentPlan({
               style={{ width: `${completeness.overall.percentage}%` }}
             ></div>
           </div>
+
+          {/* Missing Items Breakdown */}
+          {completeness.overall.percentage < 100 && (
+            <div className="mt-4 text-left">
+              <div className="text-sm font-semibold mb-2 text-white/90">
+                🎯 To reach 100% health score:
+              </div>
+              <div className="bg-white/10 rounded-lg p-3 text-xs">
+                {completeness.sections
+                  .filter(section => section.status !== 'complete' || section.suggestions.length > 0)
+                  .map((section, index) => (
+                    <div key={section.id} className="mb-2 last:mb-0">
+                      <div className="font-medium text-white/90 mb-1">
+                        {section.name} ({section.score}/{section.maxScore} points)
+                      </div>
+                      <div className="text-white/70 ml-2">
+                        {section.issues.length > 0 && (
+                          <div className="mb-1">
+                            ❌ {section.issues.slice(0, 2).join(', ')}
+                          </div>
+                        )}
+                        {section.suggestions.length > 0 && (
+                          <div>
+                            💡 {section.suggestions.slice(0, 2).join(', ')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                <div className="mt-2 pt-2 border-t border-white/20 text-white/80 text-center">
+                  Complete these items to unlock full functionality!
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
