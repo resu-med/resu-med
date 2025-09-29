@@ -212,6 +212,15 @@ function AuthPageContent() {
                 >
                   {state.isLoading ? 'Signing In...' : 'Sign In'}
                 </button>
+
+                <div className="text-center mt-4">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors duration-200"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
               </form>
             )}
           </div>

@@ -1,11 +1,23 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-// Initialize Resend only when API key is available
-const getResendClient = () => {
-  if (!process.env.RESEND_API_KEY) {
+// Initialize Microsoft 365 SMTP transporter
+const getEmailTransporter = () => {
+  if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
     return null;
   }
-  return new Resend(process.env.RESEND_API_KEY);
+
+  return nodemailer.createTransport({
+    host: 'smtpout.secureserver.net',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_EMAIL,
+      pass: process.env.SMTP_PASSWORD,
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
 };
 
 export interface EmailOptions {
@@ -16,16 +28,16 @@ export interface EmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, text }: EmailOptions) {
-  const resend = getResendClient();
+  const transporter = getEmailTransporter();
 
-  if (!resend) {
-    console.warn('RESEND_API_KEY not configured - email not sent');
+  if (!transporter) {
+    console.warn('SMTP credentials not configured - email not sent');
     return { success: false, error: 'Email service not configured' };
   }
 
   try {
-    const result = await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'ResuMed <noreply@resu-med.com>',
+    const result = await transporter.sendMail({
+      from: process.env.FROM_EMAIL || 'ResuMed <john@resu-med.com>',
       to,
       subject,
       html,
