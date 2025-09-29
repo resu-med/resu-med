@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql, initializeDatabase } from '@/lib/database';
+import { sendEmail, createWelcomeEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +51,25 @@ export async function POST(request: NextRequest) {
     `;
 
     console.log(`✅ User ${email} has been granted admin access`);
+
+    // Send admin welcome email (don't block setup if email fails)
+    try {
+      const welcomeEmail = createWelcomeEmail(user.name, true);
+      const emailResult = await sendEmail({
+        to: user.email,
+        subject: welcomeEmail.subject,
+        html: welcomeEmail.html,
+        text: welcomeEmail.text
+      });
+
+      if (emailResult.success) {
+        console.log(`📧 Admin welcome email sent to: ${email}`);
+      } else {
+        console.warn(`⚠️ Failed to send admin welcome email to: ${email}`, emailResult.error);
+      }
+    } catch (emailError) {
+      console.error('Admin welcome email error:', emailError);
+    }
 
     return NextResponse.json({
       success: true,

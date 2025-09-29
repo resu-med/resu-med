@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { sql, initializeDatabase } from '@/lib/database';
+import { sendEmail, createWelcomeEmail } from '@/lib/email';
 
 // Password strength validation
 function validatePassword(password: string): { valid: boolean; errors: string[] } {
@@ -93,6 +94,25 @@ export async function POST(request: NextRequest) {
     const user = result[0];
 
     console.log(`✅ New user registered: ${email}`);
+
+    // Send welcome email (don't block registration if email fails)
+    try {
+      const welcomeEmail = createWelcomeEmail(user.name, user.is_admin);
+      const emailResult = await sendEmail({
+        to: user.email,
+        subject: welcomeEmail.subject,
+        html: welcomeEmail.html,
+        text: welcomeEmail.text
+      });
+
+      if (emailResult.success) {
+        console.log(`📧 Welcome email sent to: ${email}`);
+      } else {
+        console.warn(`⚠️ Failed to send welcome email to: ${email}`, emailResult.error);
+      }
+    } catch (emailError) {
+      console.error('Welcome email error:', emailError);
+    }
 
     return NextResponse.json({
       success: true,
