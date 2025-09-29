@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import Link from 'next/link';
 
 export default function AccountDropdown() {
@@ -10,6 +11,7 @@ export default function AccountDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { state: authState, logout } = useAuth();
   const { getCurrentPlan, state: subState } = useSubscription();
+  const { state: profileState } = useProfile();
 
   const currentPlan = getCurrentPlan();
 
@@ -43,10 +45,10 @@ export default function AccountDropdown() {
         className="flex items-center space-x-2 text-sm text-gray-600 hover:text-teal-600 transition-colors"
       >
         <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full text-white font-medium text-xs">
-          {authState.user.name?.charAt(0).toUpperCase() || authState.user.email?.charAt(0).toUpperCase()}
+          {profileState.profile.personalInfo.firstName?.charAt(0).toUpperCase() || authState.user.name?.charAt(0).toUpperCase() || authState.user.email?.charAt(0).toUpperCase()}
         </div>
         <span className="font-medium">
-          {authState.user.name || authState.user.email}
+          {profileState.profile.personalInfo.firstName || profileState.profile.personalInfo.lastName ? `${profileState.profile.personalInfo.firstName} ${profileState.profile.personalInfo.lastName}`.trim() : authState.user.name || authState.user.email}
         </span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -65,10 +67,10 @@ export default function AccountDropdown() {
           <div className="px-4 py-3 border-b border-gray-100">
             <div className="flex items-center space-x-3">
               <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full text-white font-semibold">
-                {authState.user.name?.charAt(0).toUpperCase() || authState.user.email?.charAt(0).toUpperCase()}
+                {profileState.profile.personalInfo.firstName?.charAt(0).toUpperCase() || authState.user.name?.charAt(0).toUpperCase() || authState.user.email?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="font-medium text-gray-900">{authState.user.name}</p>
+                <p className="font-medium text-gray-900">{profileState.profile.personalInfo.firstName || profileState.profile.personalInfo.lastName ? `${profileState.profile.personalInfo.firstName} ${profileState.profile.personalInfo.lastName}`.trim() : authState.user.name}</p>
                 <p className="text-sm text-gray-500">{authState.user.email}</p>
                 <div className="flex items-center space-x-2 mt-1">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

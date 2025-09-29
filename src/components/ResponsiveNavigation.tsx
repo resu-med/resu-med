@@ -163,13 +163,13 @@ export default function ResponsiveNavigation({
                       <div className="flex-shrink-0">
                         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center">
                           <span className="text-white font-medium text-sm">
-                            {authState.user?.name?.[0] || authState.user?.email?.[0] || 'U'}
+                            {profileState.profile.personalInfo.firstName?.[0] || authState.user?.name?.[0] || authState.user?.email?.[0] || 'U'}
                           </span>
                         </div>
                       </div>
                       <div className="ml-3">
                         <div className="text-base font-medium text-gray-800">
-                          {authState.user?.name || 'User'}
+                          {profileState.profile.personalInfo.firstName || profileState.profile.personalInfo.lastName ? `${profileState.profile.personalInfo.firstName} ${profileState.profile.personalInfo.lastName}`.trim() : authState.user?.name || 'User'}
                         </div>
                         <div className="text-sm font-medium text-gray-500">
                           {authState.user?.email}
