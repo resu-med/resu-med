@@ -31,30 +31,39 @@ function ProfilePageContent() {
   const { state: authState, logout } = useAuth();
   const [activeQuickAction, setActiveQuickAction] = useState<string | null>(null);
 
-  // Calculate profile completeness
-  const completeness = calculateProfileCompleteness(state.profile);
+  // Calculate profile completeness - handle null profile safely
+  const completeness = calculateProfileCompleteness(state.profile || {
+    personalInfo: { firstName: '', lastName: '', email: '', phone: '', location: '', website: '', linkedin: '', github: '' },
+    experience: [],
+    education: [],
+    skills: [],
+    interests: []
+  });
 
 
   // Function to check completion status of each section
   const getCompletionStatus = (section: ProfileSection): boolean => {
+    // Safely handle null profile
+    if (!state.profile) return false;
+
     switch (section) {
       case 'upload':
         // Consider upload complete if there's meaningful data in the profile
-        return !!(state.profile.personalInfo.firstName ||
-                 state.profile.experience.length > 0 ||
-                 state.profile.education.length > 0 ||
-                 state.profile.skills.length > 0);
+        return !!(state.profile.personalInfo?.firstName ||
+                 state.profile.experience?.length > 0 ||
+                 state.profile.education?.length > 0 ||
+                 state.profile.skills?.length > 0);
       case 'personal':
-        const personal = state.profile.personalInfo;
+        const personal = state.profile.personalInfo || {};
         return !!(personal.firstName && personal.lastName && personal.email);
       case 'experience':
-        return state.profile.experience.length > 0;
+        return (state.profile.experience || []).length > 0;
       case 'education':
-        return state.profile.education.length > 0;
+        return (state.profile.education || []).length > 0;
       case 'skills':
-        return state.profile.skills.length > 0;
+        return (state.profile.skills || []).length > 0;
       case 'interests':
-        return state.profile.interests.length > 0;
+        return (state.profile.interests || []).length > 0;
       default:
         return false;
     }
@@ -82,7 +91,7 @@ function ProfilePageContent() {
       case 'upload':
         return <ResumeUpload key="upload" />;
       case 'personal':
-        return <PersonalInfoForm key={`personal-${state.profile.personalInfo.firstName}-${state.profile.personalInfo.lastName}`} />;
+        return <PersonalInfoForm key={`personal-${state.profile?.personalInfo?.firstName || ''}-${state.profile?.personalInfo?.lastName || ''}`} />;
       case 'experience':
         return <ExperienceForm key="experience" />;
       case 'education':
@@ -110,7 +119,13 @@ function ProfilePageContent() {
         currentSection={activeSection}
         onNavigateToSection={handleNavigateToSection}
         onQuickAction={handleQuickAction}
-        profile={state.profile}
+        profile={state.profile || {
+          personalInfo: { firstName: '', lastName: '', email: '', phone: '', location: '', website: '', linkedin: '', github: '' },
+          experience: [],
+          education: [],
+          skills: [],
+          interests: []
+        }}
       >
         {renderSection()}
       </SimplifiedProfileLayout>
