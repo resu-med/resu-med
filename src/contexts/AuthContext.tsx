@@ -28,6 +28,7 @@ interface SignupData {
   name: string;
   email: string;
   password: string;
+  selectedPlan: string;
 }
 
 type AuthAction =
