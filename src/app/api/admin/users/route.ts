@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
 
-    // Verify admin access
+    // Verify admin access (users endpoint should be admin-only, not accessible by testers)
     const authResult = await verifyAdminToken(request);
     if (!authResult.isValid) {
       return createAdminAPIResponse(authResult.error || 'Unauthorized');

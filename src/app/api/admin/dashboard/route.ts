@@ -15,9 +15,11 @@ export async function GET(request: NextRequest) {
       return createTesterAPIResponse(authResult.error || 'Unauthorized');
     }
 
+    const isTesterOnly = authResult.user?.isTester && !authResult.user?.isAdmin;
+
     await initializeDatabase();
 
-    // Get user statistics
+    // Get user statistics (aggregated only for testers)
     const [
       totalUsers,
       newUsersToday,
@@ -34,19 +36,22 @@ export async function GET(request: NextRequest) {
       sql`SELECT COUNT(*) as count FROM users WHERE last_login_at >= CURRENT_DATE - INTERVAL '30 days'`
     ]);
 
-    // Get recent users with subscription data
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const recentUsers = await sql`
-      SELECT
-        u.id, u.email, u.name, u.email_verified, u.is_admin, u.is_tester, u.created_at, u.last_login_at,
-        s.plan_id, s.tier, s.status,
-        usage.job_searches, usage.ai_optimizations, usage.cover_letters_generated, usage.profile_exports
-      FROM users u
-      LEFT JOIN user_subscriptions s ON u.id = s.user_id
-      LEFT JOIN user_usage usage ON u.id = usage.user_id AND usage.month = ${currentMonth}
-      ORDER BY u.created_at DESC
-      LIMIT 10
-    `;
+    // Get recent users with subscription data (only for admins)
+    let recentUsers = [];
+    if (!isTesterOnly) {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      recentUsers = await sql`
+        SELECT
+          u.id, u.email, u.name, u.email_verified, u.is_admin, u.is_tester, u.created_at, u.last_login_at,
+          s.plan_id, s.tier, s.status,
+          usage.job_searches, usage.ai_optimizations, usage.cover_letters_generated, usage.profile_exports
+        FROM users u
+        LEFT JOIN user_subscriptions s ON u.id = s.user_id
+        LEFT JOIN user_usage usage ON u.id = usage.user_id AND usage.month = ${currentMonth}
+        ORDER BY u.created_at DESC
+        LIMIT 10
+      `;
+    }
 
     // Get user growth data (last 7 days)
     const userGrowth = await sql`
@@ -76,7 +81,8 @@ export async function GET(request: NextRequest) {
         date: row.date,
         new_users: parseInt(row.new_users)
       })),
-      subscription_stats: subscriptionStats
+      subscription_stats: subscriptionStats,
+      is_tester_only: isTesterOnly
     });
 
   } catch (error) {

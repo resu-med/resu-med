@@ -54,6 +54,7 @@ interface User {
   name: string;
   email_verified: boolean;
   is_admin: boolean;
+  is_tester?: boolean;
   last_login_at: string | null;
   created_at: string;
   plan_id?: string;
@@ -86,18 +87,19 @@ export default function AdminDashboard() {
     api_status: APIStatus[];
   } | null>(null);
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
+  const [isTesterOnly, setIsTesterOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if user is admin
+  // Check if user is admin or tester
   useEffect(() => {
     if (!state.isLoading) {
-      if (!state.isAuthenticated || !state.user?.isAdmin) {
+      if (!state.isAuthenticated || (!state.user?.isAdmin && !state.user?.isTester)) {
         router.push('/auth');
         return;
       }
     }
-  }, [state.isAuthenticated, state.user?.isAdmin, state.isLoading, router]);
+  }, [state.isAuthenticated, state.user?.isAdmin, state.user?.isTester, state.isLoading, router]);
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -133,7 +135,8 @@ export default function AdminDashboard() {
 
       setUserStats(dashboardData.user_stats);
       setSubscriptionStats(dashboardData.subscription_stats);
-      setRecentUsers(dashboardData.recent_users);
+      setRecentUsers(dashboardData.recent_users || []);
+      setIsTesterOnly(dashboardData.is_tester_only || false);
       setApiUsage({
         summary: apiUsageData.summary,
         api_status: apiUsageData.api_status
@@ -147,13 +150,13 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (state.isAuthenticated && state.user?.isAdmin && state.token) {
+    if (state.isAuthenticated && (state.user?.isAdmin || state.user?.isTester) && state.token) {
       fetchDashboardData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.isAuthenticated, state.user?.isAdmin, state.token]);
+  }, [state.isAuthenticated, state.user?.isAdmin, state.user?.isTester, state.token]);
 
-  if (state.isLoading || (!state.user?.isAdmin && state.isAuthenticated)) {
+  if (state.isLoading || (!state.user?.isAdmin && !state.user?.isTester && state.isAuthenticated)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -164,7 +167,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!state.isAuthenticated || !state.user?.isAdmin) {
+  if (!state.isAuthenticated || (!state.user?.isAdmin && !state.user?.isTester)) {
     return null;
   }
 
@@ -218,16 +221,18 @@ export default function AdminDashboard() {
             >
               Overview
             </button>
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'users'
-                  ? 'border-purple-500 text-purple-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              User Management
-            </button>
+            {!isTesterOnly && (
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'users'
+                    ? 'border-purple-500 text-purple-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                User Management
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('api-usage')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
@@ -430,91 +435,93 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Recent Users */}
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Recent Users</h3>
-              </div>
-              <div className="overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage This Month</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {recentUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col gap-1">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              user.email_verified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {user.email_verified ? 'Verified' : 'Unverified'}
-                            </span>
-                            {user.is_admin && (
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                                Admin
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            user.plan_id === 'professional' ? 'bg-gold-100 text-gold-800' :
-                            user.plan_id === 'pro' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {user.plan_id === 'professional' ? 'Professional' :
-                             user.plan_id === 'pro' ? 'Pro' :
-                             'Free'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.job_searches !== null ? (
-                            (() => {
-                              const limits = getSubscriptionLimits(user.plan_id);
-                              return (
-                                <div className="text-xs space-y-1">
-                                  <div>Searches: {formatUsageWithLimit(user.job_searches || 0, limits.jobSearchesPerMonth)}</div>
-                                  <div>AI Opt: {formatUsageWithLimit(user.ai_optimizations || 0, limits.aiOptimizations)}</div>
-                                  <div>Letters: {formatUsageWithLimit(user.cover_letters_generated || 0, limits.coverLetters)}</div>
-                                  <div>Exports: {formatUsageWithLimit(user.profile_exports || 0, limits.profileExports)}</div>
-                                </div>
-                              );
-                            })()
-                          ) : (
-                            <span className="text-gray-400">No usage</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}
-                        </td>
+            {/* Recent Users - Only show for admins */}
+            {!isTesterOnly && recentUsers.length > 0 && (
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">Recent Users</h3>
+                </div>
+                <div className="overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage This Month</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {recentUsers.map((user) => (
+                        <tr key={user.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                user.email_verified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                                {user.email_verified ? 'Verified' : 'Unverified'}
+                              </span>
+                              {user.is_admin && (
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                  Admin
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              user.plan_id === 'professional' ? 'bg-gold-100 text-gold-800' :
+                              user.plan_id === 'pro' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {user.plan_id === 'professional' ? 'Professional' :
+                               user.plan_id === 'pro' ? 'Pro' :
+                               'Free'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {user.job_searches !== null ? (
+                              (() => {
+                                const limits = getSubscriptionLimits(user.plan_id);
+                                return (
+                                  <div className="text-xs space-y-1">
+                                    <div>Searches: {formatUsageWithLimit(user.job_searches || 0, limits.jobSearchesPerMonth)}</div>
+                                    <div>AI Opt: {formatUsageWithLimit(user.ai_optimizations || 0, limits.aiOptimizations)}</div>
+                                    <div>Letters: {formatUsageWithLimit(user.cover_letters_generated || 0, limits.coverLetters)}</div>
+                                    <div>Exports: {formatUsageWithLimit(user.profile_exports || 0, limits.profileExports)}</div>
+                                  </div>
+                                );
+                              })()
+                            ) : (
+                              <span className="text-gray-400">No usage</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(user.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {/* Users Tab */}
-        {activeTab === 'users' && <UserManagementTab />}
+        {/* Users Tab - Only show for admins */}
+        {activeTab === 'users' && !isTesterOnly && <UserManagementTab />}
 
         {/* API Usage Tab */}
         {activeTab === 'api-usage' && apiUsage && (
