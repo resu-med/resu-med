@@ -24,54 +24,28 @@ async function parseClientPDF(file: File): Promise<string> {
     const version = pdfjs.version || '5.4.149';
     console.log('📦 Using pdfjs-dist version:', version);
 
-    // Try multiple worker sources with the correct version
-    const workerSources = [
-      `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.js`,
-      `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.js`,
-      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`,
-      // Fallback to a known working version
-      `https://unpkg.com/pdfjs-dist@5.4.149/build/pdf.worker.min.js`,
-      `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.js`
-    ];
+    // Disable external workers entirely to avoid CORS issues
+    console.log('🚫 Disabling external workers to avoid CORS issues');
+    pdfjs.GlobalWorkerOptions.workerSrc = '';
 
-    // Try setting up the worker, with fallback to disable worker if needed
-    let workerSetup = false;
-    try {
-      // First try the most reliable CDN
-      pdfjs.GlobalWorkerOptions.workerSrc = workerSources[0];
-      console.log('🔧 PDF.js worker configured:', pdfjs.GlobalWorkerOptions.workerSrc);
-      workerSetup = true;
-    } catch (workerError) {
-      console.warn('⚠️ Worker setup failed, trying without worker:', workerError);
-      // Disable worker as fallback
-      pdfjs.GlobalWorkerOptions.workerSrc = '';
-    }
+    // For better performance, we could create a local worker file later
+    console.log('✅ PDF.js configured to run without external worker dependencies');
 
     const arrayBuffer = await file.arrayBuffer();
     console.log('📁 PDF file loaded into memory, size:', arrayBuffer.byteLength, 'bytes');
 
-    let pdf;
-    try {
-      pdf = await pdfjs.getDocument({
-        data: arrayBuffer,
-        useWorkerFetch: false,  // Disable worker fetch as fallback
-        isEvalSupported: false,  // Disable eval for security
-        useSystemFonts: true     // Use system fonts
-      }).promise;
-      console.log('📑 PDF document loaded successfully, pages:', pdf.numPages);
-    } catch (pdfLoadError) {
-      console.error('❌ Failed to load PDF with worker, trying without worker:', pdfLoadError);
+    // Load PDF without worker to avoid CORS and external dependency issues
+    const pdf = await pdfjs.getDocument({
+      data: arrayBuffer,
+      disableWorker: true,           // Force disable worker
+      useWorkerFetch: false,         // Don't use worker for fetching
+      isEvalSupported: false,        // Disable eval for security
+      useSystemFonts: true,          // Use system fonts
+      cMapUrl: null,                 // Disable external CMap loading
+      cMapPacked: false              // Don't use packed CMaps
+    }).promise;
 
-      // Try again without worker
-      pdfjs.GlobalWorkerOptions.workerSrc = '';
-      pdf = await pdfjs.getDocument({
-        data: arrayBuffer,
-        disableWorker: true,
-        useWorkerFetch: false,
-        isEvalSupported: false
-      }).promise;
-      console.log('📑 PDF document loaded without worker, pages:', pdf.numPages);
-    }
+    console.log('📑 PDF document loaded successfully (no worker), pages:', pdf.numPages);
 
     let text = '';
 
