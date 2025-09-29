@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { SUBSCRIPTION_PLANS } from '@/types/subscription';
 
 interface User {
   id: number;
@@ -28,6 +29,16 @@ interface PaginationInfo {
   total: number;
   totalPages: number;
 }
+
+const getSubscriptionLimits = (planId?: string) => {
+  const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId) || SUBSCRIPTION_PLANS[0]; // Default to free
+  return plan.limits;
+};
+
+const formatUsageWithLimit = (current: number, limit: number) => {
+  if (limit === -1) return `${current}/∞`;
+  return `${current}/${limit}`;
+};
 
 export default function UserManagement() {
   const { state } = useAuth();
@@ -329,12 +340,17 @@ export default function UserManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {user.job_searches !== null && user.job_searches !== undefined ? (
-                          <div className="text-xs space-y-1">
-                            <div>Searches: {user.job_searches || 0}</div>
-                            <div>AI Opt: {user.ai_optimizations || 0}</div>
-                            <div>Letters: {user.cover_letters_generated || 0}</div>
-                            <div>Exports: {user.profile_exports || 0}</div>
-                          </div>
+                          (() => {
+                            const limits = getSubscriptionLimits(user.plan_id);
+                            return (
+                              <div className="text-xs space-y-1">
+                                <div>Searches: {formatUsageWithLimit(user.job_searches || 0, limits.jobSearchesPerMonth)}</div>
+                                <div>AI Opt: {formatUsageWithLimit(user.ai_optimizations || 0, limits.aiOptimizations)}</div>
+                                <div>Letters: {formatUsageWithLimit(user.cover_letters_generated || 0, limits.coverLetters)}</div>
+                                <div>Exports: {formatUsageWithLimit(user.profile_exports || 0, limits.profileExports)}</div>
+                              </div>
+                            );
+                          })()
                         ) : (
                           <span className="text-gray-400">No usage</span>
                         )}
