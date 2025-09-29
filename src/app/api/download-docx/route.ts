@@ -379,24 +379,34 @@ function createPersonalInfoHeader(personalInfo: any): Paragraph[] {
     );
   }
 
-  // Add LinkedIn if available
+  // Add LinkedIn and Website if available
+  const additionalInfo = [];
   if (personalInfo.linkedin) {
-    paragraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `LinkedIn: ${personalInfo.linkedin}`,
-            size: FONTS.LINKEDIN,
-            color: COLORS.MUTED,
-            font: FONT_FAMILY
-          })
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 300 }
-      })
-    );
+    additionalInfo.push(`LinkedIn: ${personalInfo.linkedin}`);
+  }
+  if (personalInfo.website) {
+    additionalInfo.push(`Portfolio: ${personalInfo.website}`);
+  }
+
+  if (additionalInfo.length > 0) {
+    additionalInfo.forEach((info, index) => {
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: info,
+              size: FONTS.LINKEDIN,
+              color: COLORS.MUTED,
+              font: FONT_FAMILY
+            })
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: index === additionalInfo.length - 1 ? 300 : 100 }
+        })
+      );
+    });
   } else if (contactParts.length > 0) {
-    // Add extra spacing if no LinkedIn
+    // Add extra spacing if no additional info
     const lastParagraph = paragraphs[paragraphs.length - 1];
     if (lastParagraph) {
       lastParagraph.spacing = { after: 300 };
@@ -443,7 +453,7 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
 
     // Skip personal info lines (already added in header)
     if (profile?.personalInfo) {
-      const { firstName, lastName, email, phone, location, linkedin } = profile.personalInfo;
+      const { firstName, lastName, email, phone, location, linkedin, website } = profile.personalInfo;
 
       // Skip name line
       if (firstName && lastName && line.includes(firstName) && line.includes(lastName) && i < 5) {
@@ -455,6 +465,7 @@ function createCoverLetterDocument(content: string, profile?: any): Document {
           (phone && line.includes(phone)) ||
           (location && line.includes(location)) ||
           (linkedin && line.includes(linkedin)) ||
+          (website && line.includes(website)) ||
           (line.includes('@') && line.includes('|'))) {
         continue;
       }
