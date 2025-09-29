@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import type { UserProfile } from '@/types/profile';
+import jwt from 'jsonwebtoken';
+import { canPerformAction, trackUsage } from '@/lib/subscription-usage-tracker';
 
 const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
 
@@ -10,6 +12,30 @@ const openai = apiKey ? new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    let userId: number;
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      userId = decoded.userId;
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Check if user can perform AI optimization
+    const canOptimize = await canPerformAction(userId, 'ai-optimization');
+    if (!canOptimize) {
+      return NextResponse.json({
+        error: 'AI optimization limit reached. Please upgrade your plan for more optimizations.'
+      }, { status: 403 });
+    }
+
     const { profile }: { profile: UserProfile } = await request.json();
 
     if (!profile.experience.length) {
@@ -72,6 +98,8 @@ Return ONLY the professional overview text, no additional formatting or explanat
     if (!openai) {
       const fallbackOverview = generateFallbackOverview({ profile });
       if (fallbackOverview) {
+        // Track usage for fallback generation
+        await trackUsage(userId, 'ai-optimization');
         return NextResponse.json({ overview: fallbackOverview });
       }
       throw new Error('No OpenAI API key available and fallback failed');
@@ -99,15 +127,20 @@ Return ONLY the professional overview text, no additional formatting or explanat
       throw new Error('No overview generated');
     }
 
+    // Track usage after successful generation
+    await trackUsage(userId, 'ai-optimization');
+
     return NextResponse.json({ overview });
 
   } catch (error) {
     console.error('Error generating professional overview:', error);
 
     // Fallback overview generation if AI fails
-    const fallbackOverview = generateFallbackOverview(await request.json());
+    const fallbackOverview = generateFallbackOverview({ profile });
 
     if (fallbackOverview) {
+      // Track usage for fallback generation too
+      await trackUsage(userId, 'ai-optimization');
       return NextResponse.json({ overview: fallbackOverview });
     }
 

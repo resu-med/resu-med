@@ -108,13 +108,14 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'Basic resume builder',
       '5 job searches per month',
       '2 basic templates',
+      '1 AI optimization',
       'PDF export',
       'Community support'
     ],
     limits: {
       jobSearchesPerMonth: 5,
       resumeTemplates: 2,
-      aiOptimizations: 0,
+      aiOptimizations: 1,
       coverLetters: 1,
       profileExports: 3
     }

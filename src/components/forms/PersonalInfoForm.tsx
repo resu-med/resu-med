@@ -1,10 +1,12 @@
 'use client';
 
 import { useProfile } from '@/contexts/ProfileContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 
 export default function PersonalInfoForm() {
   const { state, dispatch } = useProfile();
+  const { state: authState } = useAuth();
   const { personalInfo } = state.profile;
 
   // Track whether social links section is shown
@@ -71,11 +73,19 @@ export default function PersonalInfoForm() {
       return;
     }
 
+    if (!authState.token) {
+      alert('Please log in to use AI optimization');
+      return;
+    }
+
     setIsGeneratingOverview(true);
     try {
       const response = await fetch('/api/generate-professional-overview', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authState.token}`
+        },
         body: JSON.stringify({
           profile: state.profile
         })
@@ -87,8 +97,13 @@ export default function PersonalInfoForm() {
         handleChange('professionalOverview', overview);
         setShowProfessionalOverview(true);
       } else {
+        const errorData = await response.json();
         console.error('Failed to generate professional overview');
-        alert('Failed to generate overview. Please try again.');
+        if (response.status === 403) {
+          alert(errorData.error || 'AI optimization limit reached. Please upgrade your plan for more optimizations.');
+        } else {
+          alert('Failed to generate overview. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Error generating overview:', error);
