@@ -20,21 +20,58 @@ async function parseClientPDF(file: File): Promise<string> {
     // Use pdfjs-dist directly instead of react-pdf for better compatibility
     const pdfjs = await import('pdfjs-dist');
 
-    // Try multiple worker sources for better reliability
+    // Get the actual version we have installed
+    const version = pdfjs.version || '5.4.149';
+    console.log('📦 Using pdfjs-dist version:', version);
+
+    // Try multiple worker sources with the correct version
     const workerSources = [
-      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js`,
-      `https://unpkg.com/pdfjs-dist@4.8.69/build/pdf.worker.min.js`,
-      `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.js`
+      `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.js`,
+      `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.js`,
+      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`,
+      // Fallback to a known working version
+      `https://unpkg.com/pdfjs-dist@5.4.149/build/pdf.worker.min.js`,
+      `https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.149/build/pdf.worker.min.js`
     ];
 
-    pdfjs.GlobalWorkerOptions.workerSrc = workerSources[0];
-    console.log('🔧 PDF.js worker configured:', pdfjs.GlobalWorkerOptions.workerSrc);
+    // Try setting up the worker, with fallback to disable worker if needed
+    let workerSetup = false;
+    try {
+      // First try the most reliable CDN
+      pdfjs.GlobalWorkerOptions.workerSrc = workerSources[0];
+      console.log('🔧 PDF.js worker configured:', pdfjs.GlobalWorkerOptions.workerSrc);
+      workerSetup = true;
+    } catch (workerError) {
+      console.warn('⚠️ Worker setup failed, trying without worker:', workerError);
+      // Disable worker as fallback
+      pdfjs.GlobalWorkerOptions.workerSrc = '';
+    }
 
     const arrayBuffer = await file.arrayBuffer();
     console.log('📁 PDF file loaded into memory, size:', arrayBuffer.byteLength, 'bytes');
 
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-    console.log('📑 PDF document loaded successfully, pages:', pdf.numPages);
+    let pdf;
+    try {
+      pdf = await pdfjs.getDocument({
+        data: arrayBuffer,
+        useWorkerFetch: false,  // Disable worker fetch as fallback
+        isEvalSupported: false,  // Disable eval for security
+        useSystemFonts: true     // Use system fonts
+      }).promise;
+      console.log('📑 PDF document loaded successfully, pages:', pdf.numPages);
+    } catch (pdfLoadError) {
+      console.error('❌ Failed to load PDF with worker, trying without worker:', pdfLoadError);
+
+      // Try again without worker
+      pdfjs.GlobalWorkerOptions.workerSrc = '';
+      pdf = await pdfjs.getDocument({
+        data: arrayBuffer,
+        disableWorker: true,
+        useWorkerFetch: false,
+        isEvalSupported: false
+      }).promise;
+      console.log('📑 PDF document loaded without worker, pages:', pdf.numPages);
+    }
 
     let text = '';
 
@@ -70,12 +107,14 @@ async function parseClientPDF(file: File): Promise<string> {
     console.error('❌ Client-side PDF parsing failed:', error);
 
     // Provide more specific error messages
-    if (error.message.includes('worker')) {
-      throw new Error('PDF processing failed due to worker loading issues. Please try converting your resume to DOCX format.');
-    } else if (error.message.includes('Invalid PDF')) {
-      throw new Error('This PDF file appears to be corrupted or password-protected. Please try a different PDF or convert to DOCX format.');
+    if (error.message.includes('worker') || error.message.includes('Worker') || error.message.includes('Failed to fetch dynamically imported module')) {
+      throw new Error('PDF processing failed due to worker loading issues. Please try converting your resume to DOCX format, which processes more reliably.');
+    } else if (error.message.includes('Invalid PDF') || error.message.includes('PDF')) {
+      throw new Error('This PDF file appears to be corrupted, password-protected, or incompatible. Please try a different PDF or convert to DOCX format.');
+    } else if (error.message.includes('fetch') || error.message.includes('404')) {
+      throw new Error('PDF processing services are temporarily unavailable. Please try converting your resume to DOCX format.');
     } else {
-      throw new Error(`PDF processing failed: ${error.message}`);
+      throw new Error(`PDF processing failed: ${error.message}. Try converting to DOCX format for better compatibility.`);
     }
   }
 }
