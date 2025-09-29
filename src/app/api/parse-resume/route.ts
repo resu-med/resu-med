@@ -4,16 +4,27 @@ import OpenAI from 'openai';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚀 PDF Parse API called');
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
+      console.error('❌ No file provided in request');
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    console.log('📁 File received:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      lastModified: new Date(file.lastModified).toISOString()
+    });
+
     // Convert file to buffer
+    console.log('🔄 Converting file to buffer...');
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    console.log('✅ Buffer created, size:', buffer.length, 'bytes');
 
     let text = '';
 
@@ -23,7 +34,22 @@ export async function POST(request: NextRequest) {
         console.log('📄 Starting PDF parsing for:', file.name, 'Size:', file.size, 'bytes');
 
         // Dynamic import to avoid Next.js issues with pdf-parse
-        const pdf = (await import('pdf-parse')).default;
+        console.log('📦 Importing pdf-parse...');
+        let pdf;
+        try {
+          pdf = (await import('pdf-parse')).default;
+          console.log('✅ pdf-parse imported successfully');
+        } catch (importError: any) {
+          console.error('❌ Failed to import pdf-parse:', importError);
+          return NextResponse.json(
+            {
+              error: 'PDF parsing library not available',
+              details: 'Server configuration issue - pdf-parse could not be loaded',
+              suggestion: 'Please try converting to DOCX format'
+            },
+            { status: 500 }
+          );
+        }
 
         // Add PDF parsing options for better compatibility
         const options = {
@@ -31,8 +57,12 @@ export async function POST(request: NextRequest) {
           max: 0,
         };
 
+        console.log('🔄 Calling pdf-parse with buffer of', buffer.length, 'bytes...');
         const pdfData = await pdf(buffer, options);
+        console.log('🎯 PDF parsing completed successfully');
+
         text = pdfData.text;
+        console.log('📝 Raw text extracted, length:', text.length);
 
         console.log('✅ Successfully parsed PDF file:', file.name);
         console.log('📊 Extracted text length:', text.length, 'characters');
