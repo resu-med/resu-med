@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     await initializeDatabase();
 
     const body = await request.json();
-    const { name, email, password } = body;
+    const { name, email, password, selectedPlan = 'free' } = body;
 
     // Validation
     if (!name || !email || !password) {
@@ -127,6 +127,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Account created successfully',
+      selectedPlan,
       user: {
         id: user.id,
         email: user.email,

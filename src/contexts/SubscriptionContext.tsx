@@ -150,43 +150,99 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [state, dispatch] = useReducer(subscriptionReducer, initialState);
   const { state: authState } = useAuth();
 
-  // Sync with authenticated user
+  // Sync with authenticated user and fetch subscription data
   useEffect(() => {
-    if (authState.isAuthenticated && authState.user) {
-      // Convert AuthContext user to SubscriptionContext user with defaults
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const userWithSubscription = {
-        id: authState.user.id.toString(),
-        email: authState.user.email,
-        name: authState.user.name,
-        subscription: {
-          id: 'sub-' + authState.user.id,
-          userId: authState.user.id.toString(),
-          planId: 'free',
-          tier: 'free' as SubscriptionTier,
-          status: 'active',
-          currentPeriodStart: new Date().toISOString(),
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          cancelAtPeriodEnd: false,
-          createdAt: authState.user.createdAt,
-          updatedAt: new Date().toISOString()
-        },
-        usage: {
-          userId: authState.user.id.toString(),
-          month: currentMonth,
-          jobSearches: 0,
-          aiOptimizations: 0,
-          coverLettersGenerated: 0,
-          profileExports: 0,
-          lastResetDate: new Date().toISOString()
-        },
-        createdAt: authState.user.createdAt
+    if (authState.isAuthenticated && authState.user && authState.token) {
+      const fetchUserSubscription = async () => {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        try {
+          // Fetch actual subscription data from database
+          const response = await fetch(`/api/debug/check-user`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authState.token}`
+            },
+            body: JSON.stringify({ email: authState.user.email })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const userData = data.user;
+
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            const userWithSubscription = {
+              id: authState.user.id.toString(),
+              email: authState.user.email,
+              name: authState.user.name,
+              subscription: {
+                id: userData.stripe_subscription_id || 'sub-' + authState.user.id,
+                userId: authState.user.id.toString(),
+                planId: userData.plan_id || 'free',
+                tier: userData.tier || 'free' as SubscriptionTier,
+                status: userData.status || 'active',
+                currentPeriodStart: new Date().toISOString(),
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                cancelAtPeriodEnd: false,
+                createdAt: authState.user.createdAt,
+                updatedAt: new Date().toISOString()
+              },
+              usage: {
+                userId: authState.user.id.toString(),
+                month: currentMonth,
+                jobSearches: 0,
+                aiOptimizations: 0,
+                coverLettersGenerated: 0,
+                profileExports: 0,
+                lastResetDate: new Date().toISOString()
+              },
+              createdAt: authState.user.createdAt
+            };
+            dispatch({ type: 'SET_USER', payload: userWithSubscription });
+          } else {
+            // Fallback to free plan if fetch fails
+            console.error('Failed to fetch subscription data, defaulting to free plan');
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            const userWithSubscription = {
+              id: authState.user.id.toString(),
+              email: authState.user.email,
+              name: authState.user.name,
+              subscription: {
+                id: 'sub-' + authState.user.id,
+                userId: authState.user.id.toString(),
+                planId: 'free',
+                tier: 'free' as SubscriptionTier,
+                status: 'active',
+                currentPeriodStart: new Date().toISOString(),
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                cancelAtPeriodEnd: false,
+                createdAt: authState.user.createdAt,
+                updatedAt: new Date().toISOString()
+              },
+              usage: {
+                userId: authState.user.id.toString(),
+                month: currentMonth,
+                jobSearches: 0,
+                aiOptimizations: 0,
+                coverLettersGenerated: 0,
+                profileExports: 0,
+                lastResetDate: new Date().toISOString()
+              },
+              createdAt: authState.user.createdAt
+            };
+            dispatch({ type: 'SET_USER', payload: userWithSubscription });
+          }
+        } catch (error) {
+          console.error('Error fetching subscription data:', error);
+          dispatch({ type: 'SET_ERROR', payload: 'Failed to load subscription data' });
+        }
       };
-      dispatch({ type: 'SET_USER', payload: userWithSubscription });
+
+      fetchUserSubscription();
     } else {
       dispatch({ type: 'LOGOUT' });
     }
-  }, [authState.isAuthenticated, authState.user]);
+  }, [authState.isAuthenticated, authState.user, authState.token]);
 
   const initializeDemoUser = () => {
     const demoUser = createDefaultUser();

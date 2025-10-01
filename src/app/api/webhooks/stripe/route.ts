@@ -14,7 +14,14 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
     const signature = request.headers.get('stripe-signature');
 
+    console.log('🔍 Webhook signature check:', signature ? 'Present' : 'Missing');
+    console.log('🔍 Webhook secret configured:', webhookSecret ? 'Yes' : 'No');
+    console.log('🔍 Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
+    console.log('🔍 Body type:', typeof body, 'Length:', body.length);
+    console.log('🔍 Webhook secret preview:', webhookSecret?.substring(0, 15) + '...');
+
     if (!signature) {
+      console.error('❌ No Stripe signature provided');
       return NextResponse.json(
         { error: 'No signature provided' },
         { status: 400 }
@@ -25,15 +32,37 @@ export async function POST(request: NextRequest) {
 
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    } catch (err) {
-      console.error('Webhook signature verification failed:', err);
+      console.log('✅ Webhook signature verified successfully');
+    } catch (err: any) {
+      console.error('❌ Webhook signature verification failed:', err.message);
+      console.error('❌ Error type:', err.constructor.name);
+      console.error('❌ Webhook secret being used:', webhookSecret?.substring(0, 10) + '...');
+      console.error('❌ Raw signature header:', signature);
+
+      // For debugging purposes, let's try to parse the event without verification in non-production
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          const unsafeEvent = JSON.parse(body);
+          console.log('🔧 DEBUG: Parsed event without verification:', unsafeEvent.type, unsafeEvent.id);
+        } catch (parseErr) {
+          console.error('❌ Failed to parse body as JSON:', parseErr);
+        }
+      }
+
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 400 }
       );
     }
 
-    console.log('Stripe webhook event:', event.type);
+    console.log('🔔 Stripe webhook event:', event.type, 'ID:', event.id);
+    console.log('📊 Event data preview:', JSON.stringify(event.data.object, null, 2).substring(0, 500) + '...');
+
+    // Check database connection
+    if (!sql) {
+      console.error('❌ Database not available in webhook');
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    }
 
     // Handle different event types
     switch (event.type) {
@@ -115,7 +144,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  console.log('Subscription created:', subscription.id);
+  console.log('Subscription created:', subscription.id, 'status:', subscription.status);
 
   const { userId, planId } = subscription.metadata || {};
 
@@ -124,26 +153,31 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     return;
   }
 
-  try {
-    // Update user subscription in database
-    await updateUserSubscription(parseInt(userId), {
-      planId,
-      stripeSubscriptionId: subscription.id,
-      status: subscription.status as 'active' | 'cancelled' | 'expired' | 'trialing',
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-    });
+  // Only update to paid plan if subscription is active
+  if (subscription.status === 'active') {
+    try {
+      // Update user subscription in database
+      await updateUserSubscription(parseInt(userId), {
+        planId,
+        stripeSubscriptionId: subscription.id,
+        status: subscription.status,
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      });
 
-    console.log(`✅ Subscription ${subscription.id} created for user ${userId}`);
-  } catch (error) {
-    console.error('Failed to update subscription:', error);
+      console.log(`✅ Subscription ${subscription.id} activated for user ${userId}`);
+    } catch (error) {
+      console.error('Failed to update subscription:', error);
+    }
+  } else {
+    console.log(`⏳ Subscription ${subscription.id} created but not active (${subscription.status})`);
   }
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  console.log('Subscription updated:', subscription.id);
+  console.log('Subscription updated:', subscription.id, 'status:', subscription.status);
 
-  const { userId } = subscription.metadata || {};
+  const { userId, planId } = subscription.metadata || {};
 
   if (!userId) {
     console.error('Missing userId in subscription metadata');
@@ -151,15 +185,28 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   }
 
   try {
-    // Update subscription status in database
-    await updateUserSubscription(parseInt(userId), {
-      status: subscription.status as 'active' | 'cancelled' | 'expired' | 'trialing',
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-    });
-
-    console.log(`✅ Subscription ${subscription.id} updated for user ${userId}`);
+    // If subscription becomes active, activate the paid plan
+    if (subscription.status === 'active' && planId && planId !== 'free') {
+      console.log(`🚀 Activating ${planId} plan for user ${userId}...`);
+      await updateUserSubscription(parseInt(userId), {
+        planId,
+        stripeSubscriptionId: subscription.id,
+        status: subscription.status,
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      });
+      console.log(`✅ User ${userId} upgraded to ${planId} plan via subscription update`);
+    } else {
+      // Just update status and dates for other changes
+      await updateUserSubscription(parseInt(userId), {
+        status: subscription.status as 'active' | 'cancelled' | 'expired' | 'trialing' | 'incomplete',
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      });
+      console.log(`✅ Subscription ${subscription.id} status updated for user ${userId}`);
+    }
   } catch (error) {
     console.error('Failed to update subscription:', error);
   }
@@ -204,8 +251,33 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       });
 
       console.log(`✅ Payment recorded: ${invoice.id} for ${invoice.currency} ${invoice.amount_paid}`);
+
+      // If this is the first payment (subscription creation), activate the subscription
+      if (invoice.billing_reason === 'subscription_create') {
+        console.log('💰 First payment detected - activating subscription');
+        // Get subscription details to extract metadata
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        const { userId, planId } = subscription.metadata || {};
+
+        console.log('👤 Metadata from subscription:', { userId, planId });
+
+        if (userId && planId) {
+          console.log(`🔄 Updating user ${userId} to ${planId} plan...`);
+          await updateUserSubscription(parseInt(userId), {
+            planId,
+            stripeSubscriptionId: subscription.id,
+            status: 'active',
+            currentPeriodStart: new Date(subscription.current_period_start * 1000),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          });
+
+          console.log(`✅ Subscription ${subscription.id} activated for user ${userId} via payment success`);
+        } else {
+          console.error('❌ Missing userId or planId in subscription metadata');
+        }
+      }
     } catch (error) {
-      console.error('Failed to record payment:', error);
+      console.error('Failed to record payment or activate subscription:', error);
     }
   }
 }

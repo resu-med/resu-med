@@ -210,6 +210,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         payload: { user: loginData.user, token: loginData.token }
       });
 
+      // If user selected a paid plan, redirect to Stripe checkout
+      if (registerData.selectedPlan && registerData.selectedPlan !== 'free') {
+        const checkoutResponse = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${loginData.token}`
+          },
+          body: JSON.stringify({
+            planId: registerData.selectedPlan,
+            userId: loginData.user.id,
+            userEmail: loginData.user.email
+          }),
+        });
+
+        const checkoutData = await checkoutResponse.json();
+
+        if (checkoutResponse.ok && checkoutData.url) {
+          // Redirect to Stripe checkout
+          window.location.href = checkoutData.url;
+          return; // Don't continue with normal flow
+        }
+      }
+
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Registration failed';
       dispatch({ type: 'SET_ERROR', payload: message });
