@@ -16,9 +16,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 Webhook signature check:', signature ? 'Present' : 'Missing');
     console.log('🔍 Webhook secret configured:', webhookSecret ? 'Yes' : 'No');
-    console.log('🔍 Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
     console.log('🔍 Body type:', typeof body, 'Length:', body.length);
-    console.log('🔍 Webhook secret preview:', webhookSecret?.substring(0, 15) + '...');
 
     if (!signature) {
       console.error('❌ No Stripe signature provided');
@@ -61,8 +59,13 @@ export async function POST(request: NextRequest) {
     // Check database connection
     if (!sql) {
       console.error('❌ Database not available in webhook');
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Database not available', timestamp: new Date().toISOString() },
+        { status: 500 }
+      );
     }
+
+    console.log('✅ Database connection available');
 
     // Handle different event types
     switch (event.type) {
@@ -108,9 +111,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('❌ Webhook error:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+
+    // Return more specific error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Returning error response:', errorMessage);
+
     return NextResponse.json(
-      { error: 'Webhook handler failed' },
+      {
+        error: 'Webhook handler failed',
+        details: errorMessage,
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }
