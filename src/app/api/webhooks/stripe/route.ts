@@ -118,11 +118,17 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log('Checkout completed:', session.id);
+  console.log('🔍 Session metadata:', JSON.stringify(session.metadata, null, 2));
+  console.log('🔍 Session customer:', session.customer);
+  console.log('🔍 Session subscription:', session.subscription);
 
   const { userId, planId } = session.metadata || {};
 
+  console.log('🔍 Extracted userId:', userId, 'planId:', planId);
+
   if (!userId || !planId) {
-    console.error('Missing metadata in checkout session');
+    console.error('❌ Missing metadata in checkout session');
+    console.error('❌ Available metadata keys:', Object.keys(session.metadata || {}));
     return;
   }
 
@@ -145,11 +151,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   console.log('Subscription created:', subscription.id, 'status:', subscription.status);
+  console.log('🔍 Subscription metadata:', JSON.stringify(subscription.metadata, null, 2));
 
   const { userId, planId } = subscription.metadata || {};
 
+  console.log('🔍 Extracted userId:', userId, 'planId:', planId);
+
   if (!userId || !planId) {
-    console.error('Missing metadata in subscription');
+    console.error('❌ Missing metadata in subscription');
+    console.error('❌ Available metadata keys:', Object.keys(subscription.metadata || {}));
     return;
   }
 
@@ -176,11 +186,15 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('Subscription updated:', subscription.id, 'status:', subscription.status);
+  console.log('🔍 Subscription metadata:', JSON.stringify(subscription.metadata, null, 2));
 
   const { userId, planId } = subscription.metadata || {};
 
+  console.log('🔍 Extracted userId:', userId, 'planId:', planId);
+
   if (!userId) {
-    console.error('Missing userId in subscription metadata');
+    console.error('❌ Missing userId in subscription metadata');
+    console.error('❌ Available metadata keys:', Object.keys(subscription.metadata || {}));
     return;
   }
 
@@ -318,11 +332,16 @@ async function updateUserSubscription(userId: number, updates: SubscriptionUpdat
     throw new Error('Database not available');
   }
 
+  console.log('🔍 Updating subscription for userId:', userId);
+  console.log('🔍 Updates:', JSON.stringify(updates, null, 2));
+
   try {
     // Check if user has a subscription record
     const existingSubscription = await sql`
       SELECT id FROM user_subscriptions WHERE user_id = ${userId}
     `;
+
+    console.log('🔍 Existing subscription found:', existingSubscription.length > 0);
 
     if (existingSubscription.length === 0) {
       // Create new subscription record
