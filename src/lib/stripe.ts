@@ -61,8 +61,8 @@ export const STRIPE_PRODUCTS = {
       profileExports: 20
     }
   },
-  professional: {
-    id: 'professional',
+  ultimate: {
+    id: 'ultimate',
     name: 'Ultimate',
     price: 15.99,
     stripePriceId: STRIPE_PRICE_IDS.professional,
