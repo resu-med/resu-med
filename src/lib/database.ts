@@ -176,6 +176,20 @@ export async function initializeDatabase() {
       )
     `;
 
+    // Create payment records table for Stripe webhooks
+    await sql`
+      CREATE TABLE IF NOT EXISTS payment_records (
+        id SERIAL PRIMARY KEY,
+        invoice_id VARCHAR(255) UNIQUE NOT NULL,
+        subscription_id VARCHAR(255) NOT NULL,
+        amount INTEGER NOT NULL, -- Amount in cents
+        currency VARCHAR(3) NOT NULL DEFAULT 'gbp',
+        status VARCHAR(20) NOT NULL, -- paid, failed, etc.
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `;
+
     console.log('✅ Database tables initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

@@ -30,14 +30,14 @@ export const STRIPE_PRODUCTS = {
       'Basic resume builder',
       '5 job searches per month',
       '1 AI optimization per month',
-      '2 cover letters per month',
-      '3 profile exports per month'
+      '1 cover letter per month',
+      '1 profile export per month'
     ],
     limits: {
       jobSearchesPerMonth: 5,
       aiOptimizations: 1,
-      coverLetters: 2,
-      profileExports: 3
+      coverLetters: 1,
+      profileExports: 1
     }
   },
   pro: {

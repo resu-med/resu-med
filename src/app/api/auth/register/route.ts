@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { sql, initializeDatabase } from '@/lib/database';
 import { sendEmail, createWelcomeEmail } from '@/lib/email';
+import { initializeUserSubscription } from '@/lib/subscription-usage-tracker';
 
 // Password strength validation
 function validatePassword(password: string): { valid: boolean; errors: string[] } {
@@ -92,6 +93,15 @@ export async function POST(request: NextRequest) {
     `;
 
     const user = result[0];
+
+    // Initialize user subscription with free plan
+    try {
+      await initializeUserSubscription(user.id);
+      console.log(`✅ Initialized free subscription for user ${user.id}`);
+    } catch (error) {
+      console.error('Failed to initialize user subscription:', error);
+      // Don't fail registration if subscription initialization fails
+    }
 
     console.log(`✅ New user registered: ${email}`);
 
