@@ -125,13 +125,13 @@ export async function canPerformAction(
   if (!sql) return false;
 
   try {
-    // Check if user is admin first - admins have unlimited usage
-    const adminCheck = await sql`
-      SELECT is_admin FROM users WHERE id = ${userId}
+    // Check if user is admin or tester first - both have unlimited usage
+    const privilegeCheck = await sql`
+      SELECT is_admin, is_tester FROM users WHERE id = ${userId}
     `;
 
-    if (adminCheck.length > 0 && adminCheck[0].is_admin) {
-      return true; // Admins have unlimited usage for all features
+    if (privilegeCheck.length > 0 && (privilegeCheck[0].is_admin || privilegeCheck[0].is_tester)) {
+      return true; // Admins and testers have unlimited usage for all features
     }
 
     const currentMonth = new Date().toISOString().slice(0, 7);
